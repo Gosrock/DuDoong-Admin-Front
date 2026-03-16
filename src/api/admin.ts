@@ -38,7 +38,7 @@ export const deleteComment = (commentId: number) =>
 
 // Auth
 export const login = (email: string, name: string) =>
-  client.post('/v1/auth/oauth/local/login', {
+  client.post('/api/v1/auth/oauth/local/login', {
     email,
     name,
     phoneNumber: '010-0000-0000',
