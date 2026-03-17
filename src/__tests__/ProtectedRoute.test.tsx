@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
-import App from '../App'
 
 // Minimal test for ProtectedRoute logic
 describe('ProtectedRoute', () => {
