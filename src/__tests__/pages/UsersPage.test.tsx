@@ -44,17 +44,16 @@ describe('UsersPage', () => {
     renderWithProviders(<UsersPage />)
     await waitFor(() => {
       expect(screen.getByText('테스트유저')).toBeInTheDocument()
-      expect(screen.getByText('관리자')).toBeInTheDocument()
-      expect(screen.getByText('매니저')).toBeInTheDocument()
+      expect(screen.getByText('test@dudoong.com')).toBeInTheDocument()
+      expect(screen.getByText('admin@dudoong.com')).toBeInTheDocument()
     })
   })
 
-  it('역할 뱃지를 올바르게 표시한다', async () => {
+  it('역할 뱃지를 한국어로 표시한다', async () => {
     renderWithProviders(<UsersPage />)
     await waitFor(() => {
-      expect(screen.getByText('SUPER_ADMIN')).toBeInTheDocument()
-      expect(screen.getByText('MANAGER')).toBeInTheDocument()
-      expect(screen.getByText('USER')).toBeInTheDocument()
+      expect(screen.getByText('최고관리자')).toBeInTheDocument()
+      expect(screen.getByText('일반회원')).toBeInTheDocument()
     })
   })
 })

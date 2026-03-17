@@ -1,9 +1,14 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, XCircle, CreditCard, User, Calendar, Tag } from 'lucide-react'
 import { getOrderDetail, cancelOrder } from '../api/admin'
 import type { AdminOrder } from '../types'
 import { cn } from '../lib/utils'
+import { label, orderStatusLabel } from '../lib/labels'
+import ConfirmModal from '../components/ConfirmModal'
+import ToastContainer from '../components/ToastContainer'
+import { useToast } from '../hooks/useToast'
 
 const statusBadge: Record<string, string> = {
   CONFIRM: 'bg-green-100 text-green-700',
@@ -17,6 +22,9 @@ export default function OrderDetailPage() {
   const { uuid } = useParams<{ uuid: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const toast = useToast()
+
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const { data: order, isLoading } = useQuery<AdminOrder>({
     queryKey: ['order', uuid],
@@ -29,17 +37,14 @@ export default function OrderDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['order', uuid] })
       queryClient.invalidateQueries({ queryKey: ['orders'] })
+      toast.success('주문이 취소되었습니다.')
+    },
+    onError: () => {
+      toast.error('주문 취소에 실패했습니다.')
     },
   })
 
-  const handleCancel = () => {
-    if (window.confirm('이 주문을 강제 취소하시겠습니까?')) {
-      cancelMutation.mutate()
-    }
-  }
-
-  const canCancel = (status: string) =>
-    status === 'CONFIRM' || status === 'PENDING_APPROVE'
+  const canCancel = (s: string) => s === 'CONFIRM' || s === 'PENDING_APPROVE'
 
   if (isLoading) {
     return (
@@ -80,7 +85,7 @@ export default function OrderDetailPage() {
               statusBadge[order.orderStatus] ?? 'bg-gray-100 text-gray-700'
             )}
           >
-            {order.orderStatus}
+            {label(orderStatusLabel, order.orderStatus)}
           </span>
         </div>
 
@@ -127,7 +132,7 @@ export default function OrderDetailPage() {
         {canCancel(order.orderStatus) && (
           <div className="mt-6 border-t border-gray-200 pt-6">
             <button
-              onClick={handleCancel}
+              onClick={() => setConfirmOpen(true)}
               disabled={cancelMutation.isPending}
               className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
             >
@@ -137,6 +142,21 @@ export default function OrderDetailPage() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        open={confirmOpen}
+        title="주문 강제 취소"
+        description="이 주문을 강제 취소하시겠습니까?"
+        confirmLabel="취소"
+        variant="danger"
+        onConfirm={() => {
+          cancelMutation.mutate()
+          setConfirmOpen(false)
+        }}
+        onCancel={() => setConfirmOpen(false)}
+      />
+
+      <ToastContainer toasts={toast.toasts} />
     </div>
   )
 }

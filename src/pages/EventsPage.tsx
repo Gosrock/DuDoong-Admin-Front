@@ -5,6 +5,10 @@ import { Search, Trash2 } from 'lucide-react'
 import { getEvents, deleteEvent } from '../api/admin'
 import type { AdminEvent, Page } from '../types'
 import { cn } from '../lib/utils'
+import { label, eventStatusLabel } from '../lib/labels'
+import ConfirmModal from '../components/ConfirmModal'
+import ToastContainer from '../components/ToastContainer'
+import { useToast } from '../hooks/useToast'
 
 const statuses = ['ALL', 'PREPARING', 'OPEN', 'CALCULATING', 'CLOSED', 'DELETED']
 
@@ -19,10 +23,14 @@ const statusBadge: Record<string, string> = {
 export default function EventsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const toast = useToast()
   const [page, setPage] = useState(0)
   const [keyword, setKeyword] = useState('')
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('ALL')
+
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<{ id: number; name: string } | null>(null)
 
   const { data, isLoading } = useQuery<Page<AdminEvent>>({
     queryKey: ['events', page, search, status],
@@ -37,7 +45,13 @@ export default function EventsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: deleteEvent,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['events'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] })
+      toast.success('이벤트가 삭제되었습니다.')
+    },
+    onError: () => {
+      toast.error('이벤트 삭제에 실패했습니다.')
+    },
   })
 
   const handleSearch = (e: React.FormEvent) => {
@@ -46,10 +60,10 @@ export default function EventsPage() {
     setPage(0)
   }
 
-  const handleDelete = (id: number, name: string) => {
-    if (window.confirm(`"${name}" 이벤트를 삭제하시겠습니까?`)) {
-      deleteMutation.mutate(id)
-    }
+  const handleDelete = (e: React.MouseEvent, id: number, name: string) => {
+    e.stopPropagation()
+    setPendingDelete({ id, name })
+    setConfirmOpen(true)
   }
 
   return (
@@ -85,7 +99,7 @@ export default function EventsPage() {
         >
           {statuses.map((s) => (
             <option key={s} value={s}>
-              {s === 'ALL' ? '전체 상태' : s}
+              {s === 'ALL' ? '전체 상태' : label(eventStatusLabel, s)}
             </option>
           ))}
         </select>
@@ -96,13 +110,13 @@ export default function EventsPage() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
-                <th className="px-4 py-3 font-medium text-gray-600">ID</th>
-                <th className="px-4 py-3 font-medium text-gray-600">이벤트명</th>
-                <th className="px-4 py-3 font-medium text-gray-600">호스트</th>
-                <th className="px-4 py-3 font-medium text-gray-600">상태</th>
-                <th className="px-4 py-3 font-medium text-gray-600">시작일</th>
-                <th className="px-4 py-3 font-medium text-gray-600">생성일</th>
-                <th className="px-4 py-3 font-medium text-gray-600">작업</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">ID</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">이벤트명</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">호스트</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">상태</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">시작일</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">생성일</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">작업</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -130,7 +144,7 @@ export default function EventsPage() {
                     <td className="px-4 py-3 text-gray-600">{event.hostName}</td>
                     <td className="px-4 py-3">
                       <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-xs font-medium', statusBadge[event.status] ?? 'bg-gray-100 text-gray-700')}>
-                        {event.status}
+                        {label(eventStatusLabel, event.status)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-500">
@@ -141,10 +155,10 @@ export default function EventsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <button
-                        onClick={() => handleDelete(event.id, event.name)}
+                        onClick={(e) => handleDelete(e, event.id, event.name)}
                         disabled={event.status === 'DELETED' || deleteMutation.isPending}
-                        className="text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
-                        title="삭제"
+                        aria-label="이벤트 삭제"
+                        className="p-2 text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -156,33 +170,54 @@ export default function EventsPage() {
           </table>
         </div>
 
-        {data && data.totalPages > 1 && (
+        {data && (
           <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
             <p className="text-sm text-gray-500">
               총 {data.totalElements.toLocaleString()}건
             </p>
-            <div className="flex gap-1">
-              <button
-                disabled={page === 0}
-                onClick={() => setPage(page - 1)}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                이전
-              </button>
-              <span className="flex items-center px-3 text-sm text-gray-600">
-                {page + 1} / {data.totalPages}
-              </span>
-              <button
-                disabled={page >= data.totalPages - 1}
-                onClick={() => setPage(page + 1)}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                다음
-              </button>
-            </div>
+            {data.totalPages > 1 && (
+              <div className="flex gap-1">
+                <button
+                  disabled={page === 0}
+                  onClick={() => setPage(page - 1)}
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  이전
+                </button>
+                <span className="flex items-center px-3 text-sm text-gray-600">
+                  {page + 1} / {data.totalPages}
+                </span>
+                <button
+                  disabled={page >= data.totalPages - 1}
+                  onClick={() => setPage(page + 1)}
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  다음
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        open={confirmOpen}
+        title="이벤트 삭제"
+        description={`"${pendingDelete?.name}" 이벤트를 삭제하시겠습니까?`}
+        confirmLabel="삭제"
+        variant="danger"
+        onConfirm={() => {
+          if (pendingDelete) deleteMutation.mutate(pendingDelete.id)
+          setConfirmOpen(false)
+          setPendingDelete(null)
+        }}
+        onCancel={() => {
+          setConfirmOpen(false)
+          setPendingDelete(null)
+        }}
+      />
+
+      <ToastContainer toasts={toast.toasts} />
     </div>
   )
 }

@@ -5,6 +5,10 @@ import { Search, XCircle } from 'lucide-react'
 import { getOrders, cancelOrder } from '../api/admin'
 import type { AdminOrder, Page } from '../types'
 import { cn } from '../lib/utils'
+import { label, orderStatusLabel } from '../lib/labels'
+import ConfirmModal from '../components/ConfirmModal'
+import ToastContainer from '../components/ToastContainer'
+import { useToast } from '../hooks/useToast'
 
 const statuses = ['ALL', 'CONFIRM', 'PENDING_APPROVE', 'REFUND', 'CANCELED', 'FAILED']
 
@@ -19,10 +23,14 @@ const statusBadge: Record<string, string> = {
 export default function OrdersPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const toast = useToast()
   const [page, setPage] = useState(0)
   const [keyword, setKeyword] = useState('')
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('ALL')
+
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pendingCancelId, setPendingCancelId] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery<Page<AdminOrder>>({
     queryKey: ['orders', page, search, status],
@@ -37,7 +45,13 @@ export default function OrdersPage() {
 
   const cancelMutation = useMutation({
     mutationFn: cancelOrder,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['orders'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] })
+      toast.success('주문이 취소되었습니다.')
+    },
+    onError: () => {
+      toast.error('주문 취소에 실패했습니다.')
+    },
   })
 
   const handleSearch = (e: React.FormEvent) => {
@@ -46,14 +60,13 @@ export default function OrdersPage() {
     setPage(0)
   }
 
-  const handleCancel = (orderId: string) => {
-    if (window.confirm('이 주문을 취소하시겠습니까?')) {
-      cancelMutation.mutate(orderId)
-    }
+  const handleCancel = (e: React.MouseEvent, orderId: string) => {
+    e.stopPropagation()
+    setPendingCancelId(orderId)
+    setConfirmOpen(true)
   }
 
-  const canCancel = (status: string) =>
-    status === 'CONFIRM' || status === 'PENDING_APPROVE'
+  const canCancel = (s: string) => s === 'CONFIRM' || s === 'PENDING_APPROVE'
 
   return (
     <div>
@@ -88,7 +101,7 @@ export default function OrdersPage() {
         >
           {statuses.map((s) => (
             <option key={s} value={s}>
-              {s === 'ALL' ? '전체 상태' : s}
+              {s === 'ALL' ? '전체 상태' : label(orderStatusLabel, s)}
             </option>
           ))}
         </select>
@@ -99,14 +112,14 @@ export default function OrdersPage() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
-                <th className="px-4 py-3 font-medium text-gray-600">주문번호</th>
-                <th className="px-4 py-3 font-medium text-gray-600">사용자</th>
-                <th className="px-4 py-3 font-medium text-gray-600">이벤트</th>
-                <th className="px-4 py-3 font-medium text-gray-600">티켓</th>
-                <th className="px-4 py-3 font-medium text-gray-600">금액</th>
-                <th className="px-4 py-3 font-medium text-gray-600">상태</th>
-                <th className="px-4 py-3 font-medium text-gray-600">주문일</th>
-                <th className="px-4 py-3 font-medium text-gray-600">작업</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">주문번호</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">사용자</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">이벤트</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">티켓</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">금액</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">상태</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">주문일</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">작업</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -140,7 +153,7 @@ export default function OrdersPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-xs font-medium', statusBadge[order.orderStatus] ?? 'bg-gray-100 text-gray-700')}>
-                        {order.orderStatus}
+                        {label(orderStatusLabel, order.orderStatus)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-500">
@@ -149,10 +162,10 @@ export default function OrdersPage() {
                     <td className="px-4 py-3">
                       {canCancel(order.orderStatus) && (
                         <button
-                          onClick={() => handleCancel(order.orderId)}
+                          onClick={(e) => handleCancel(e, order.orderId)}
                           disabled={cancelMutation.isPending}
-                          className="text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
-                          title="주문 취소"
+                          aria-label="주문 취소"
+                          className="p-2 text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <XCircle className="h-4 w-4" />
                         </button>
@@ -165,33 +178,54 @@ export default function OrdersPage() {
           </table>
         </div>
 
-        {data && data.totalPages > 1 && (
+        {data && (
           <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
             <p className="text-sm text-gray-500">
               총 {data.totalElements.toLocaleString()}건
             </p>
-            <div className="flex gap-1">
-              <button
-                disabled={page === 0}
-                onClick={() => setPage(page - 1)}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                이전
-              </button>
-              <span className="flex items-center px-3 text-sm text-gray-600">
-                {page + 1} / {data.totalPages}
-              </span>
-              <button
-                disabled={page >= data.totalPages - 1}
-                onClick={() => setPage(page + 1)}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                다음
-              </button>
-            </div>
+            {data.totalPages > 1 && (
+              <div className="flex gap-1">
+                <button
+                  disabled={page === 0}
+                  onClick={() => setPage(page - 1)}
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  이전
+                </button>
+                <span className="flex items-center px-3 text-sm text-gray-600">
+                  {page + 1} / {data.totalPages}
+                </span>
+                <button
+                  disabled={page >= data.totalPages - 1}
+                  onClick={() => setPage(page + 1)}
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  다음
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        open={confirmOpen}
+        title="주문 취소"
+        description="이 주문을 취소하시겠습니까?"
+        confirmLabel="취소"
+        variant="danger"
+        onConfirm={() => {
+          if (pendingCancelId) cancelMutation.mutate(pendingCancelId)
+          setConfirmOpen(false)
+          setPendingCancelId(null)
+        }}
+        onCancel={() => {
+          setConfirmOpen(false)
+          setPendingCancelId(null)
+        }}
+      />
+
+      <ToastContainer toasts={toast.toasts} />
     </div>
   )
 }

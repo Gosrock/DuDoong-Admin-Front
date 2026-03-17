@@ -1,9 +1,14 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Trash2, Clock, Users } from 'lucide-react'
 import { getEventDetail, deleteEvent } from '../api/admin'
 import type { AdminEvent } from '../types'
 import { cn } from '../lib/utils'
+import { label, eventStatusLabel } from '../lib/labels'
+import ConfirmModal from '../components/ConfirmModal'
+import ToastContainer from '../components/ToastContainer'
+import { useToast } from '../hooks/useToast'
 
 const statusBadge: Record<string, string> = {
   PREPARING: 'bg-yellow-100 text-yellow-700',
@@ -17,7 +22,10 @@ export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const toast = useToast()
   const eventId = Number(id)
+
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const { data: event, isLoading } = useQuery<AdminEvent>({
     queryKey: ['event', eventId],
@@ -29,15 +37,13 @@ export default function EventDetailPage() {
     mutationFn: () => deleteEvent(eventId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] })
+      toast.success('이벤트가 삭제되었습니다.')
       navigate('/events')
     },
+    onError: () => {
+      toast.error('이벤트 삭제에 실패했습니다.')
+    },
   })
-
-  const handleDelete = () => {
-    if (window.confirm('이 이벤트를 삭제하시겠습니까? (소프트 삭제)')) {
-      deleteMutation.mutate()
-    }
-  }
 
   if (isLoading) {
     return (
@@ -78,7 +84,7 @@ export default function EventDetailPage() {
               statusBadge[event.status] ?? 'bg-gray-100 text-gray-700'
             )}
           >
-            {event.status}
+            {label(eventStatusLabel, event.status)}
           </span>
         </div>
 
@@ -115,7 +121,7 @@ export default function EventDetailPage() {
         {event.status !== 'DELETED' && (
           <div className="mt-6 border-t border-gray-200 pt-6">
             <button
-              onClick={handleDelete}
+              onClick={() => setConfirmOpen(true)}
               disabled={deleteMutation.isPending}
               className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
             >
@@ -125,6 +131,21 @@ export default function EventDetailPage() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        open={confirmOpen}
+        title="이벤트 삭제"
+        description="이 이벤트를 삭제하시겠습니까? (소프트 삭제)"
+        confirmLabel="삭제"
+        variant="danger"
+        onConfirm={() => {
+          deleteMutation.mutate()
+          setConfirmOpen(false)
+        }}
+        onCancel={() => setConfirmOpen(false)}
+      />
+
+      <ToastContainer toasts={toast.toasts} />
     </div>
   )
 }

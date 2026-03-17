@@ -1,9 +1,14 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import { getUserDetail, updateUserRole, updateUserStatus } from '../api/admin'
 import type { AdminUserDetail } from '../types'
 import { cn } from '../lib/utils'
+import { label, roleLabel, accountStateLabel } from '../lib/labels'
+import ConfirmModal from '../components/ConfirmModal'
+import ToastContainer from '../components/ToastContainer'
+import { useToast } from '../hooks/useToast'
 
 const roles = ['USER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN']
 
@@ -23,7 +28,12 @@ export default function UserDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const toast = useToast()
   const userId = Number(id)
+
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pendingRole, setPendingRole] = useState<string | null>(null)
+  const [statusConfirmOpen, setStatusConfirmOpen] = useState(false)
 
   const { data: user, isLoading } = useQuery<AdminUserDetail>({
     queryKey: ['user', userId],
@@ -36,6 +46,10 @@ export default function UserDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user', userId] })
       queryClient.invalidateQueries({ queryKey: ['users'] })
+      toast.success('역할이 변경되었습니다.')
+    },
+    onError: () => {
+      toast.error('역할 변경에 실패했습니다.')
     },
   })
 
@@ -44,6 +58,10 @@ export default function UserDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user', userId] })
       queryClient.invalidateQueries({ queryKey: ['users'] })
+      toast.success('계정 상태가 변경되었습니다.')
+    },
+    onError: () => {
+      toast.error('계정 상태 변경에 실패했습니다.')
     },
   })
 
@@ -84,10 +102,10 @@ export default function UserDetailPage() {
           </div>
           <div className="flex items-center gap-2">
             <span className={cn('rounded-full px-3 py-1 text-xs font-medium', roleBadge[user.accountRole] ?? 'bg-gray-100 text-gray-700')}>
-              {user.accountRole}
+              {label(roleLabel, user.accountRole)}
             </span>
             <span className={cn('rounded-full px-3 py-1 text-xs font-medium', statusBadge[user.accountState] ?? 'bg-gray-100 text-gray-700')}>
-              {user.accountState}
+              {label(accountStateLabel, user.accountState)}
             </span>
           </div>
         </div>
@@ -124,22 +142,23 @@ export default function UserDetailPage() {
             <label className="text-sm font-medium text-gray-700">역할 변경:</label>
             <select
               value={user.accountRole}
-              onChange={(e) => roleMutation.mutate(e.target.value)}
+              onChange={(e) => {
+                setPendingRole(e.target.value)
+                setConfirmOpen(true)
+              }}
               disabled={roleMutation.isPending}
               className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               {roles.map((role) => (
                 <option key={role} value={role}>
-                  {role}
+                  {label(roleLabel, role)}
                 </option>
               ))}
             </select>
           </div>
 
           <button
-            onClick={() =>
-              statusMutation.mutate(isNormal ? 'DELETED' : 'NORMAL')
-            }
+            onClick={() => setStatusConfirmOpen(true)}
             disabled={statusMutation.isPending}
             className={cn(
               'rounded-lg px-4 py-1.5 text-sm font-medium text-white transition-colors disabled:opacity-50',
@@ -152,6 +171,37 @@ export default function UserDetailPage() {
           </button>
         </div>
       </div>
+
+      <ConfirmModal
+        open={confirmOpen}
+        title="역할 변경"
+        description={`역할을 "${label(roleLabel, pendingRole ?? '')}"(으)로 변경하시겠습니까?`}
+        confirmLabel="변경"
+        onConfirm={() => {
+          if (pendingRole) roleMutation.mutate(pendingRole)
+          setConfirmOpen(false)
+          setPendingRole(null)
+        }}
+        onCancel={() => {
+          setConfirmOpen(false)
+          setPendingRole(null)
+        }}
+      />
+
+      <ConfirmModal
+        open={statusConfirmOpen}
+        title={isNormal ? '계정 정지' : '계정 복원'}
+        description={isNormal ? '이 계정을 정지하시겠습니까?' : '이 계정을 복원하시겠습니까?'}
+        confirmLabel={isNormal ? '정지' : '복원'}
+        variant={isNormal ? 'danger' : 'default'}
+        onConfirm={() => {
+          statusMutation.mutate(isNormal ? 'DELETED' : 'NORMAL')
+          setStatusConfirmOpen(false)
+        }}
+        onCancel={() => setStatusConfirmOpen(false)}
+      />
+
+      <ToastContainer toasts={toast.toasts} />
     </div>
   )
 }
