@@ -37,11 +37,19 @@ export const deleteComment = (commentId: number) =>
   client.delete(`/internal-api/v1/comments/${commentId}`)
 
 // Auth
-export const login = (email: string, name: string) =>
-  client.post('/api/v1/auth/oauth/local/login', {
+export const adminLogin = (email: string, name: string) =>
+  client.post('/internal-api/v1/auth/oauth/local/login', {
     email,
     name,
     phoneNumber: '010-0000-0000',
     profileImage: null,
     marketingAgree: false,
+  }).then(r => r.data.data)
+
+export const getAdminMe = () =>
+  client.get('/internal-api/v1/auth/me').then(r => r.data.data)
+
+export const adminRefreshToken = (refreshToken: string) =>
+  client.post('/internal-api/v1/auth/token/refresh', null, {
+    params: { token: refreshToken },
   }).then(r => r.data.data)
