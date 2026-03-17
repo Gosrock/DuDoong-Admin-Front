@@ -75,7 +75,8 @@ export default function CommentsPage() {
       </form>
 
       <div className="overflow-hidden rounded-xl bg-white shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Desktop table */}
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
@@ -139,6 +140,51 @@ export default function CommentsPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile card list */}
+        <div className="md:hidden">
+          {isLoading ? (
+            <div className="divide-y divide-gray-100">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="animate-pulse p-4 space-y-2">
+                  <div className="h-4 w-32 rounded bg-gray-200" />
+                  <div className="h-3 w-48 rounded bg-gray-200" />
+                  <div className="h-3 w-24 rounded bg-gray-200" />
+                </div>
+              ))}
+            </div>
+          ) : data?.content.length === 0 ? (
+            <p className="px-4 py-12 text-center text-gray-500">검색 결과가 없습니다.</p>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {data?.content.map((comment) => (
+                <div key={comment.id} className="p-4 transition-colors hover:bg-gray-50">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900">{comment.userName}</p>
+                      <p className="mt-0.5 truncate text-sm text-gray-500">{comment.eventName}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-xs font-medium', statusBadge[comment.commentStatus] ?? 'bg-gray-100 text-gray-700')}>
+                        {label(commentStatusLabel, comment.commentStatus)}
+                      </span>
+                      <button
+                        onClick={() => handleDelete(comment.id)}
+                        disabled={comment.commentStatus === 'DELETED' || deleteMutation.isPending}
+                        aria-label="댓글 삭제"
+                        className="p-1 text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="mt-1.5 text-sm text-gray-600 line-clamp-2">{comment.content}</p>
+                  <p className="mt-1 text-xs text-gray-400">{new Date(comment.createdAt).toLocaleDateString('ko-KR')}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {data && (

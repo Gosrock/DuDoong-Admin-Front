@@ -74,14 +74,14 @@ export default function OrderDetailPage() {
       </button>
 
       <div className="rounded-xl bg-white p-6 shadow-sm">
-        <div className="mb-6 flex items-start justify-between">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-xl font-bold text-gray-900">주문 상세</h2>
-            <p className="mt-1 font-mono text-sm text-gray-500">{order.orderId}</p>
+            <p className="mt-1 break-all font-mono text-sm text-gray-500">{order.orderId}</p>
           </div>
           <span
             className={cn(
-              'rounded-full px-3 py-1 text-xs font-medium',
+              'self-start rounded-full px-3 py-1 text-xs font-medium',
               statusBadge[order.orderStatus] ?? 'bg-gray-100 text-gray-700'
             )}
           >
@@ -134,7 +134,7 @@ export default function OrderDetailPage() {
             <button
               onClick={() => setConfirmOpen(true)}
               disabled={cancelMutation.isPending}
-              className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50 sm:w-auto sm:justify-start"
             >
               <XCircle className="h-4 w-4" />
               주문 강제 취소

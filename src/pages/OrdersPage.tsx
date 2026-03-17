@@ -72,7 +72,7 @@ export default function OrdersPage() {
     <div>
       <h2 className="mb-6 text-2xl font-bold text-gray-900">주문 관리</h2>
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <form onSubmit={handleSearch} className="flex flex-1 gap-2">
           <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -108,7 +108,8 @@ export default function OrdersPage() {
       </div>
 
       <div className="overflow-hidden rounded-xl bg-white shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Desktop table */}
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
@@ -176,6 +177,60 @@ export default function OrdersPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile card list */}
+        <div className="md:hidden">
+          {isLoading ? (
+            <div className="divide-y divide-gray-100">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="animate-pulse p-4 space-y-2">
+                  <div className="h-4 w-40 rounded bg-gray-200" />
+                  <div className="h-3 w-24 rounded bg-gray-200" />
+                  <div className="h-3 w-32 rounded bg-gray-200" />
+                </div>
+              ))}
+            </div>
+          ) : data?.content.length === 0 ? (
+            <p className="px-4 py-12 text-center text-gray-500">검색 결과가 없습니다.</p>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {data?.content.map((order) => (
+                <div
+                  key={order.orderId}
+                  onClick={() => navigate(`/orders/${order.orderId}`)}
+                  className="cursor-pointer p-4 transition-colors hover:bg-gray-50"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900">{order.userName}</p>
+                      <p className="mt-0.5 truncate text-sm text-gray-500">{order.eventName}</p>
+                      <p className="text-xs text-gray-400">{order.ticketName}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-xs font-medium', statusBadge[order.orderStatus] ?? 'bg-gray-100 text-gray-700')}>
+                        {label(orderStatusLabel, order.orderStatus)}
+                      </span>
+                      {canCancel(order.orderStatus) && (
+                        <button
+                          onClick={(e) => handleCancel(e, order.orderId)}
+                          disabled={cancelMutation.isPending}
+                          aria-label="주문 취소"
+                          className="p-1 text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between text-xs text-gray-400">
+                    <span className="font-medium text-gray-700">{order.totalAmount.toLocaleString('ko-KR')}원</span>
+                    <span>{new Date(order.createdAt).toLocaleDateString('ko-KR')}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {data && (

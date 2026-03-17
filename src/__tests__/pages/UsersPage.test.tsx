@@ -43,17 +43,17 @@ describe('UsersPage', () => {
   it('API에서 유저 목록을 로드하여 표시한다', async () => {
     renderWithProviders(<UsersPage />)
     await waitFor(() => {
-      expect(screen.getByText('테스트유저')).toBeInTheDocument()
-      expect(screen.getByText('test@dudoong.com')).toBeInTheDocument()
-      expect(screen.getByText('admin@dudoong.com')).toBeInTheDocument()
+      expect(screen.getAllByText('테스트유저').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('test@dudoong.com').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('admin@dudoong.com').length).toBeGreaterThan(0)
     })
   })
 
   it('역할 뱃지를 한국어로 표시한다', async () => {
     renderWithProviders(<UsersPage />)
     await waitFor(() => {
-      expect(screen.getByText('최고관리자')).toBeInTheDocument()
-      expect(screen.getByText('일반회원')).toBeInTheDocument()
+      expect(screen.getAllByText('최고관리자').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('일반회원').length).toBeGreaterThan(0)
     })
   })
 })
