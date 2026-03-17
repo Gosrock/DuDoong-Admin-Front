@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { login } from '../api/admin'
+import { adminLogin } from '../api/admin'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -15,7 +15,7 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const data = await login(email, name)
+      const data = await adminLogin(email, name)
       localStorage.setItem('admin_token', data.accessToken)
       navigate('/', { replace: true })
     } catch {
