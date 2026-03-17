@@ -5,6 +5,7 @@ import { Search } from 'lucide-react'
 import { getUsers } from '../api/admin'
 import type { AdminUser, Page } from '../types'
 import { cn } from '../lib/utils'
+import { label, roleLabel, accountStateLabel } from '../lib/labels'
 
 const roleBadge: Record<string, string> = {
   SUPER_ADMIN: 'bg-red-100 text-red-700',
@@ -63,12 +64,12 @@ export default function UsersPage() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
-                <th className="px-4 py-3 font-medium text-gray-600">ID</th>
-                <th className="px-4 py-3 font-medium text-gray-600">이름</th>
-                <th className="px-4 py-3 font-medium text-gray-600">이메일</th>
-                <th className="px-4 py-3 font-medium text-gray-600">역할</th>
-                <th className="px-4 py-3 font-medium text-gray-600">상태</th>
-                <th className="px-4 py-3 font-medium text-gray-600">가입일</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">ID</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">이름</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">이메일</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">역할</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">상태</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">가입일</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -100,12 +101,12 @@ export default function UsersPage() {
                     <td className="px-4 py-3 text-gray-600">{user.email}</td>
                     <td className="px-4 py-3">
                       <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-xs font-medium', roleBadge[user.accountRole] ?? 'bg-gray-100 text-gray-700')}>
-                        {user.accountRole}
+                        {label(roleLabel, user.accountRole)}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-xs font-medium', statusBadge[user.accountState] ?? 'bg-gray-100 text-gray-700')}>
-                        {user.accountState}
+                        {label(accountStateLabel, user.accountState)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-500">
@@ -118,30 +119,32 @@ export default function UsersPage() {
           </table>
         </div>
 
-        {data && data.totalPages > 1 && (
+        {data && (
           <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
             <p className="text-sm text-gray-500">
               총 {data.totalElements.toLocaleString()}명
             </p>
-            <div className="flex gap-1">
-              <button
-                disabled={page === 0}
-                onClick={() => setPage(page - 1)}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                이전
-              </button>
-              <span className="flex items-center px-3 text-sm text-gray-600">
-                {page + 1} / {data.totalPages}
-              </span>
-              <button
-                disabled={page >= data.totalPages - 1}
-                onClick={() => setPage(page + 1)}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                다음
-              </button>
-            </div>
+            {data.totalPages > 1 && (
+              <div className="flex gap-1">
+                <button
+                  disabled={page === 0}
+                  onClick={() => setPage(page - 1)}
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  이전
+                </button>
+                <span className="flex items-center px-3 text-sm text-gray-600">
+                  {page + 1} / {data.totalPages}
+                </span>
+                <button
+                  disabled={page >= data.totalPages - 1}
+                  onClick={() => setPage(page + 1)}
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  다음
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

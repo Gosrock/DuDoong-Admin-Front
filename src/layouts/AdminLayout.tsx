@@ -36,6 +36,7 @@ export default function AdminLayout() {
         <button
           className="text-gray-400 hover:text-white lg:hidden"
           onClick={() => setSidebarOpen(false)}
+          aria-label="메뉴 닫기"
         >
           <X className="h-5 w-5" />
         </button>
@@ -104,6 +105,7 @@ export default function AdminLayout() {
           <button
             onClick={() => setSidebarOpen(true)}
             className="text-gray-600 hover:text-gray-900"
+            aria-label="메뉴 열기"
           >
             <Menu className="h-6 w-6" />
           </button>

@@ -37,10 +37,11 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="login-email" className="mb-1 block text-sm font-medium text-gray-700">
               이메일
             </label>
             <input
+              id="login-email"
               type="email"
               required
               value={email}
@@ -51,10 +52,11 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="login-name" className="mb-1 block text-sm font-medium text-gray-700">
               이름
             </label>
             <input
+              id="login-name"
               type="text"
               required
               value={name}
@@ -65,7 +67,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <p className="text-sm text-red-600">{error}</p>
+            <p role="alert" className="text-sm text-red-600">{error}</p>
           )}
 
           <button

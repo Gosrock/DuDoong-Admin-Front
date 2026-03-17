@@ -4,6 +4,10 @@ import { Search, Trash2 } from 'lucide-react'
 import { getComments, deleteComment } from '../api/admin'
 import type { AdminComment, Page } from '../types'
 import { cn } from '../lib/utils'
+import { label, commentStatusLabel } from '../lib/labels'
+import ConfirmModal from '../components/ConfirmModal'
+import ToastContainer from '../components/ToastContainer'
+import { useToast } from '../hooks/useToast'
 
 const statusBadge: Record<string, string> = {
   ACTIVE: 'bg-green-100 text-green-700',
@@ -12,9 +16,13 @@ const statusBadge: Record<string, string> = {
 
 export default function CommentsPage() {
   const queryClient = useQueryClient()
+  const toast = useToast()
   const [page, setPage] = useState(0)
   const [keyword, setKeyword] = useState('')
   const [search, setSearch] = useState('')
+
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
 
   const { data, isLoading } = useQuery<Page<AdminComment>>({
     queryKey: ['comments', page, search],
@@ -23,7 +31,13 @@ export default function CommentsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: deleteComment,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['comments'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments'] })
+      toast.success('댓글이 삭제되었습니다.')
+    },
+    onError: () => {
+      toast.error('댓글 삭제에 실패했습니다.')
+    },
   })
 
   const handleSearch = (e: React.FormEvent) => {
@@ -33,9 +47,8 @@ export default function CommentsPage() {
   }
 
   const handleDelete = (id: number) => {
-    if (window.confirm('이 댓글을 삭제하시겠습니까?')) {
-      deleteMutation.mutate(id)
-    }
+    setPendingDeleteId(id)
+    setConfirmOpen(true)
   }
 
   return (
@@ -66,13 +79,13 @@ export default function CommentsPage() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
-                <th className="px-4 py-3 font-medium text-gray-600">ID</th>
-                <th className="px-4 py-3 font-medium text-gray-600">사용자</th>
-                <th className="px-4 py-3 font-medium text-gray-600">이벤트</th>
-                <th className="px-4 py-3 font-medium text-gray-600">내용</th>
-                <th className="px-4 py-3 font-medium text-gray-600">상태</th>
-                <th className="px-4 py-3 font-medium text-gray-600">작성일</th>
-                <th className="px-4 py-3 font-medium text-gray-600">작업</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">ID</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">사용자</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">이벤트</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">내용</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">상태</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">작성일</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">작업</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -105,7 +118,7 @@ export default function CommentsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-xs font-medium', statusBadge[comment.commentStatus] ?? 'bg-gray-100 text-gray-700')}>
-                        {comment.commentStatus}
+                        {label(commentStatusLabel, comment.commentStatus)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-500">
@@ -115,8 +128,8 @@ export default function CommentsPage() {
                       <button
                         onClick={() => handleDelete(comment.id)}
                         disabled={comment.commentStatus === 'DELETED' || deleteMutation.isPending}
-                        className="text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
-                        title="삭제"
+                        aria-label="댓글 삭제"
+                        className="p-2 text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -128,33 +141,54 @@ export default function CommentsPage() {
           </table>
         </div>
 
-        {data && data.totalPages > 1 && (
+        {data && (
           <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
             <p className="text-sm text-gray-500">
               총 {data.totalElements.toLocaleString()}건
             </p>
-            <div className="flex gap-1">
-              <button
-                disabled={page === 0}
-                onClick={() => setPage(page - 1)}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                이전
-              </button>
-              <span className="flex items-center px-3 text-sm text-gray-600">
-                {page + 1} / {data.totalPages}
-              </span>
-              <button
-                disabled={page >= data.totalPages - 1}
-                onClick={() => setPage(page + 1)}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                다음
-              </button>
-            </div>
+            {data.totalPages > 1 && (
+              <div className="flex gap-1">
+                <button
+                  disabled={page === 0}
+                  onClick={() => setPage(page - 1)}
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  이전
+                </button>
+                <span className="flex items-center px-3 text-sm text-gray-600">
+                  {page + 1} / {data.totalPages}
+                </span>
+                <button
+                  disabled={page >= data.totalPages - 1}
+                  onClick={() => setPage(page + 1)}
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  다음
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        open={confirmOpen}
+        title="댓글 삭제"
+        description="이 댓글을 삭제하시겠습니까?"
+        confirmLabel="삭제"
+        variant="danger"
+        onConfirm={() => {
+          if (pendingDeleteId !== null) deleteMutation.mutate(pendingDeleteId)
+          setConfirmOpen(false)
+          setPendingDeleteId(null)
+        }}
+        onCancel={() => {
+          setConfirmOpen(false)
+          setPendingDeleteId(null)
+        }}
+      />
+
+      <ToastContainer toasts={toast.toasts} />
     </div>
   )
 }

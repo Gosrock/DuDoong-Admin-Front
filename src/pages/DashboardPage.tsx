@@ -42,10 +42,28 @@ function SkeletonCard() {
 }
 
 export default function DashboardPage() {
-  const { data, isLoading } = useQuery<DashboardData>({
+  const { data, isLoading, isError, refetch } = useQuery<DashboardData>({
     queryKey: ['dashboard'],
     queryFn: getDashboard,
   })
+
+  if (isError) {
+    return (
+      <div>
+        <h2 className="mb-6 text-2xl font-bold text-gray-900">대시보드</h2>
+        <div className="flex flex-col items-center justify-center rounded-xl bg-white p-12 shadow-sm">
+          <p className="mb-4 text-gray-500">데이터를 불러오는 데 실패했습니다.</p>
+          <button
+            onClick={() => refetch()}
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            <RotateCcw className="h-4 w-4" />
+            다시 시도
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
