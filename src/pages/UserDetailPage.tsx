@@ -95,12 +95,12 @@ export default function UserDetailPage() {
       </button>
 
       <div className="rounded-xl bg-white p-6 shadow-sm">
-        <div className="mb-6 flex items-start justify-between">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-xl font-bold text-gray-900">{user.name}</h2>
             <p className="text-sm text-gray-500">{user.email}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className={cn('rounded-full px-3 py-1 text-xs font-medium', roleBadge[user.accountRole] ?? 'bg-gray-100 text-gray-700')}>
               {label(roleLabel, user.accountRole)}
             </span>
@@ -137,7 +137,7 @@ export default function UserDetailPage() {
           </div>
         </dl>
 
-        <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-gray-200 pt-6">
+        <div className="mt-6 flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-700">역할 변경:</label>
             <select
@@ -161,7 +161,7 @@ export default function UserDetailPage() {
             onClick={() => setStatusConfirmOpen(true)}
             disabled={statusMutation.isPending}
             className={cn(
-              'rounded-lg px-4 py-1.5 text-sm font-medium text-white transition-colors disabled:opacity-50',
+              'w-full rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50 sm:w-auto sm:py-1.5',
               isNormal
                 ? 'bg-red-600 hover:bg-red-700'
                 : 'bg-green-600 hover:bg-green-700'

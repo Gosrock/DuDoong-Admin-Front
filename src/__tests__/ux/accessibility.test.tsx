@@ -55,8 +55,8 @@ describe('접근성', () => {
   it('EventsPage 삭제 버튼에 aria-label이 있다', async () => {
     renderWithProviders(<EventsPage />)
     await waitFor(() => {
-      const deleteBtn = screen.getByLabelText('이벤트 삭제')
-      expect(deleteBtn).toBeInTheDocument()
+      const deleteBtns = screen.getAllByLabelText('이벤트 삭제')
+      expect(deleteBtns.length).toBeGreaterThan(0)
     })
   })
 })

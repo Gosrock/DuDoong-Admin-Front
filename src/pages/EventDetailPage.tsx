@@ -73,14 +73,14 @@ export default function EventDetailPage() {
       </button>
 
       <div className="rounded-xl bg-white p-6 shadow-sm">
-        <div className="mb-6 flex items-start justify-between">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-xl font-bold text-gray-900">{event.name}</h2>
             <p className="mt-1 text-sm text-gray-500">주최: {event.hostName}</p>
           </div>
           <span
             className={cn(
-              'rounded-full px-3 py-1 text-xs font-medium',
+              'self-start rounded-full px-3 py-1 text-xs font-medium',
               statusBadge[event.status] ?? 'bg-gray-100 text-gray-700'
             )}
           >
@@ -123,7 +123,7 @@ export default function EventDetailPage() {
             <button
               onClick={() => setConfirmOpen(true)}
               disabled={deleteMutation.isPending}
-              className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50 sm:w-auto sm:justify-start"
             >
               <Trash2 className="h-4 w-4" />
               이벤트 삭제

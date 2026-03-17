@@ -40,7 +40,7 @@ export default function UsersPage() {
     <div>
       <h2 className="mb-6 text-2xl font-bold text-gray-900">사용자 관리</h2>
 
-      <form onSubmit={handleSearch} className="mb-4 flex gap-2">
+      <form onSubmit={handleSearch} className="mb-4 flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
@@ -53,14 +53,15 @@ export default function UsersPage() {
         </div>
         <button
           type="submit"
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 sm:w-auto"
         >
           검색
         </button>
       </form>
 
       <div className="overflow-hidden rounded-xl bg-white shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Desktop table */}
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
@@ -117,6 +118,51 @@ export default function UsersPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile card list */}
+        <div className="md:hidden">
+          {isLoading ? (
+            <div className="divide-y divide-gray-100">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="animate-pulse p-4 space-y-2">
+                  <div className="h-4 w-32 rounded bg-gray-200" />
+                  <div className="h-3 w-48 rounded bg-gray-200" />
+                  <div className="h-3 w-24 rounded bg-gray-200" />
+                </div>
+              ))}
+            </div>
+          ) : data?.content.length === 0 ? (
+            <p className="px-4 py-12 text-center text-gray-500">검색 결과가 없습니다.</p>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {data?.content.map((user) => (
+                <div
+                  key={user.id}
+                  onClick={() => navigate(`/users/${user.id}`)}
+                  className="cursor-pointer p-4 transition-colors hover:bg-gray-50"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900">{user.name}</p>
+                      <p className="mt-0.5 truncate text-sm text-gray-500">{user.email}</p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-xs font-medium', roleBadge[user.accountRole] ?? 'bg-gray-100 text-gray-700')}>
+                        {label(roleLabel, user.accountRole)}
+                      </span>
+                      <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-xs font-medium', statusBadge[user.accountState] ?? 'bg-gray-100 text-gray-700')}>
+                        {label(accountStateLabel, user.accountState)}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="mt-1.5 text-xs text-gray-400">
+                    가입일: {new Date(user.createdAt).toLocaleDateString('ko-KR')}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {data && (
