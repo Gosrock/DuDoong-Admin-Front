@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { Search, XCircle } from 'lucide-react'
 import { getOrders, cancelOrder } from '../api/admin'
 import type { AdminOrder, Page } from '../types'
@@ -16,6 +17,7 @@ const statusBadge: Record<string, string> = {
 }
 
 export default function OrdersPage() {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(0)
   const [keyword, setKeyword] = useState('')
@@ -126,7 +128,7 @@ export default function OrdersPage() {
                 </tr>
               ) : (
                 data?.content.map((order) => (
-                  <tr key={order.orderId} className="transition-colors hover:bg-gray-50">
+                  <tr key={order.orderId} onClick={() => navigate(`/orders/${order.orderId}`)} className="cursor-pointer transition-colors hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono text-xs text-gray-900">
                       {order.orderId.slice(0, 8)}...
                     </td>

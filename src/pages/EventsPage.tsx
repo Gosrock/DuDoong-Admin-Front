@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { Search, Trash2 } from 'lucide-react'
 import { getEvents, deleteEvent } from '../api/admin'
 import type { AdminEvent, Page } from '../types'
@@ -16,6 +17,7 @@ const statusBadge: Record<string, string> = {
 }
 
 export default function EventsPage() {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(0)
   const [keyword, setKeyword] = useState('')
@@ -122,7 +124,7 @@ export default function EventsPage() {
                 </tr>
               ) : (
                 data?.content.map((event) => (
-                  <tr key={event.id} className="transition-colors hover:bg-gray-50">
+                  <tr key={event.id} onClick={() => navigate(`/events/${event.id}`)} className="cursor-pointer transition-colors hover:bg-gray-50">
                     <td className="px-4 py-3 text-gray-900">{event.id}</td>
                     <td className="px-4 py-3 font-medium text-gray-900">{event.name}</td>
                     <td className="px-4 py-3 text-gray-600">{event.hostName}</td>

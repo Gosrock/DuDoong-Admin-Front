@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 
 describe('API Client', () => {
   beforeEach(() => {
@@ -13,7 +13,9 @@ describe('API Client', () => {
       const { default: client } = await import('../api/client')
 
       // Intercept the request config
-      const config = await client.interceptors.request.handlers[0].fulfilled!({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const handlers = (client.interceptors.request as any).handlers
+      const config = await handlers[0].fulfilled!({
         headers: {} as any,
       } as any)
 
@@ -23,7 +25,9 @@ describe('API Client', () => {
     it('토큰이 없으면 헤더를 추가하지 않는다', async () => {
       const { default: client } = await import('../api/client')
 
-      const config = await client.interceptors.request.handlers[0].fulfilled!({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const handlers = (client.interceptors.request as any).handlers
+      const config = await handlers[0].fulfilled!({
         headers: {} as any,
       } as any)
 
@@ -36,7 +40,8 @@ describe('API Client', () => {
       localStorage.setItem('admin_token', 'expired-token')
 
       const { default: client } = await import('../api/client')
-      const errorHandler = client.interceptors.response.handlers[0].rejected!
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const errorHandler = (client.interceptors.response as any).handlers[0].rejected!
 
       // Mock window.location
       const originalHref = window.location.href

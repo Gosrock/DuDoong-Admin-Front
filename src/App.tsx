@@ -6,7 +6,9 @@ import DashboardPage from './pages/DashboardPage'
 import UsersPage from './pages/UsersPage'
 import UserDetailPage from './pages/UserDetailPage'
 import EventsPage from './pages/EventsPage'
+import EventDetailPage from './pages/EventDetailPage'
 import OrdersPage from './pages/OrdersPage'
+import OrderDetailPage from './pages/OrderDetailPage'
 import CommentsPage from './pages/CommentsPage'
 
 const queryClient = new QueryClient()
@@ -35,7 +37,9 @@ export default function App() {
             <Route path="users" element={<UsersPage />} />
             <Route path="users/:id" element={<UserDetailPage />} />
             <Route path="events" element={<EventsPage />} />
+            <Route path="events/:id" element={<EventDetailPage />} />
             <Route path="orders" element={<OrdersPage />} />
+            <Route path="orders/:uuid" element={<OrderDetailPage />} />
             <Route path="comments" element={<CommentsPage />} />
           </Route>
         </Routes>
