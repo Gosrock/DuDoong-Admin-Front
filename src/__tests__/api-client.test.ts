@@ -41,12 +41,12 @@ describe('API Client (쿠키 기반)', () => {
     expect(window.location.href).toBe('http://localhost:3000')
   })
 
-  it('403 응답 시 리다이렉트하지 않는다 (페이지에서 처리)', async () => {
+  it('403 응답 시 /login으로 리다이렉트한다', async () => {
     const { default: client } = await import('../api/client')
     const errorHandler = (client.interceptors.response as any).handlers[0].rejected!
 
     Object.defineProperty(window, 'location', {
-      value: { href: 'http://admin.test', hostname: 'localhost' },
+      value: { href: '', hostname: 'localhost' },
       writable: true,
     })
 
@@ -56,6 +56,6 @@ describe('API Client (쿠키 기반)', () => {
       // Expected rejection
     }
 
-    expect(window.location.href).toBe('http://admin.test')
+    expect(window.location.href).toBe('/login')
   })
 })
