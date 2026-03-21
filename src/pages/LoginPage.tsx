@@ -1,29 +1,24 @@
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { adminLogin } from '../api/admin'
+import { getMainSiteUrl, hasAuthCookie } from '../lib/utils'
+import { getAdminMe } from '../api/admin'
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
-  const [name, setName] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-
-    try {
-      const data = await adminLogin(email, name)
-      localStorage.setItem('admin_token', data.accessToken)
-      navigate('/', { replace: true })
-    } catch {
-      setError('로그인에 실패했습니다. 관리자 계정인지 확인해주세요.')
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    if (hasAuthCookie()) {
+      // 쿠키 있으면 권한 확인
+      getAdminMe()
+        .then(() => navigate('/', { replace: true }))
+        .catch(() => {
+          // 403 = 권한 없음 (ADMIN/SUPER_ADMIN 아님)
+          // 여기서는 리다이렉트하지 않고 안내 메시지 표시
+        })
     }
-  }
+  }, [navigate])
+
+  const mainSiteUrl = getMainSiteUrl()
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
@@ -31,53 +26,32 @@ export default function LoginPage() {
         <h1 className="mb-2 text-center text-2xl font-bold text-gray-900">
           DuDoong Admin
         </h1>
-        <p className="mb-8 text-center text-sm text-gray-500">
-          관리자 로그인
+        <p className="mb-6 text-center text-sm text-gray-500">
+          관리자 전용 페이지입니다
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="login-email" className="mb-1 block text-sm font-medium text-gray-700">
-              이메일
-            </label>
-            <input
-              id="login-email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              placeholder="admin@dudoong.com"
-            />
+        {hasAuthCookie() ? (
+          <div className="text-center">
+            <p className="mb-4 text-sm text-red-600">
+              관리자 권한이 없는 계정입니다.
+            </p>
+            <p className="text-xs text-gray-400">
+              ADMIN 이상 권한이 필요합니다.
+            </p>
           </div>
-
-          <div>
-            <label htmlFor="login-name" className="mb-1 block text-sm font-medium text-gray-700">
-              이름
-            </label>
-            <input
-              id="login-name"
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              placeholder="관리자"
-            />
-          </div>
-
-          {error && (
-            <p role="alert" className="text-sm text-red-600">{error}</p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading ? '로그인 중...' : '로그인'}
-          </button>
-        </form>
+        ) : (
+          <>
+            <p className="mb-6 text-center text-sm text-gray-600">
+              메인 사이트에서 로그인 후 다시 방문해주세요.
+            </p>
+            <a
+              href={mainSiteUrl}
+              className="block w-full rounded-lg bg-blue-600 px-4 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-blue-700"
+            >
+              메인 사이트로 이동
+            </a>
+          </>
+        )}
       </div>
     </div>
   )

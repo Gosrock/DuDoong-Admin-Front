@@ -1,62 +1,61 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 
-describe('API Client', () => {
-  beforeEach(() => {
-    localStorage.clear()
+afterEach(() => {
+  document.cookie = 'accessToken=; max-age=0'
+})
+
+describe('API Client (쿠키 기반)', () => {
+  it('withCredentials가 true로 설정되어 있다', async () => {
+    const { default: client } = await import('../api/client')
+    expect(client.defaults.withCredentials).toBe(true)
   })
 
-  describe('X-Admin-Token 인터셉터', () => {
-    it('토큰이 있으면 X-Admin-Token 헤더를 추가한다', async () => {
-      localStorage.setItem('admin_token', 'test-admin-jwt')
-
-      // Re-import to get fresh module
-      const { default: client } = await import('../api/client')
-
-      // Intercept the request config
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const handlers = (client.interceptors.request as any).handlers
-      const config = await handlers[0].fulfilled!({
-        headers: {} as any,
-      } as any)
-
-      expect(config.headers['X-Admin-Token']).toBe('test-admin-jwt')
+  it('X-Admin-Token 헤더를 사용하지 않는다 (request interceptor 없음)', async () => {
+    const { default: client } = await import('../api/client')
+    // request interceptor가 없거나 X-Admin-Token을 설정하지 않아야 함
+    const handlers = (client.interceptors.request as any).handlers
+    const hasAdminTokenInterceptor = handlers.some((h: any) => {
+      if (!h?.fulfilled) return false
+      const fnStr = h.fulfilled.toString()
+      return fnStr.includes('X-Admin-Token') || fnStr.includes('admin_token')
     })
-
-    it('토큰이 없으면 헤더를 추가하지 않는다', async () => {
-      const { default: client } = await import('../api/client')
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const handlers = (client.interceptors.request as any).handlers
-      const config = await handlers[0].fulfilled!({
-        headers: {} as any,
-      } as any)
-
-      expect(config.headers['X-Admin-Token']).toBeUndefined()
-    })
+    expect(hasAdminTokenInterceptor).toBe(false)
   })
 
-  describe('401 응답 처리', () => {
-    it('401 응답 시 admin_token을 삭제한다', async () => {
-      localStorage.setItem('admin_token', 'expired-token')
+  it('401 응답 시 메인 사이트로 리다이렉트한다', async () => {
+    const { default: client } = await import('../api/client')
+    const errorHandler = (client.interceptors.response as any).handlers[0].rejected!
 
-      const { default: client } = await import('../api/client')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const errorHandler = (client.interceptors.response as any).handlers[0].rejected!
-
-      // Mock window.location
-      const originalHref = window.location.href
-      Object.defineProperty(window, 'location', {
-        value: { href: originalHref },
-        writable: true,
-      })
-
-      try {
-        await errorHandler({ response: { status: 401 } })
-      } catch {
-        // Expected rejection
-      }
-
-      expect(localStorage.getItem('admin_token')).toBeNull()
+    const originalHref = window.location.href
+    Object.defineProperty(window, 'location', {
+      value: { href: originalHref, hostname: 'localhost' },
+      writable: true,
     })
+
+    try {
+      await errorHandler({ response: { status: 401 } })
+    } catch {
+      // Expected rejection
+    }
+
+    expect(window.location.href).toBe('http://localhost:3000')
+  })
+
+  it('403 응답 시 메인 사이트로 리다이렉트한다', async () => {
+    const { default: client } = await import('../api/client')
+    const errorHandler = (client.interceptors.response as any).handlers[0].rejected!
+
+    Object.defineProperty(window, 'location', {
+      value: { href: '', hostname: 'localhost' },
+      writable: true,
+    })
+
+    try {
+      await errorHandler({ response: { status: 403 } })
+    } catch {
+      // Expected rejection
+    }
+
+    expect(window.location.href).toBe('http://localhost:3000')
   })
 })

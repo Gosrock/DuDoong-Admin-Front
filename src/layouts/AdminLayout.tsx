@@ -10,7 +10,7 @@ import {
   Menu,
   X,
 } from 'lucide-react'
-import { cn } from '../lib/utils'
+import { cn, getMainSiteUrl } from '../lib/utils'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: '대시보드', end: true },
@@ -25,8 +25,7 @@ export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const handleLogout = () => {
-    localStorage.removeItem('admin_token')
-    navigate('/login')
+    window.location.href = getMainSiteUrl()
   }
 
   const sidebar = (
