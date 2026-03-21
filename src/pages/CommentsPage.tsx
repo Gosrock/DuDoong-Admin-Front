@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Search, Trash2 } from 'lucide-react'
 import { getComments, deleteComment } from '../api/admin'
 import type { AdminComment, Page } from '../types'
@@ -15,6 +16,9 @@ const statusBadge: Record<string, string> = {
 }
 
 export default function CommentsPage() {
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const eventId = searchParams.get('eventId') ? Number(searchParams.get('eventId')) : undefined
   const queryClient = useQueryClient()
   const toast = useToast()
   const [page, setPage] = useState(0)
@@ -24,9 +28,12 @@ export default function CommentsPage() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
 
+  const [sortField, setSortField] = useState<string>('')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+
   const { data, isLoading } = useQuery<Page<AdminComment>>({
-    queryKey: ['comments', page, search],
-    queryFn: () => getComments({ page, size: 20, keyword: search || undefined }),
+    queryKey: ['comments', page, search, eventId],
+    queryFn: () => getComments({ page, size: 20, keyword: search || undefined, eventId }),
   })
 
   const deleteMutation = useMutation({
@@ -51,9 +58,44 @@ export default function CommentsPage() {
     setConfirmOpen(true)
   }
 
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortOrder('asc')
+    }
+  }
+
+  const sortedData = useMemo(() => {
+    if (!sortField || !data?.content) return data?.content ?? []
+    return [...data.content].sort((a, b) => {
+      const aVal = a[sortField as keyof typeof a]
+      const bVal = b[sortField as keyof typeof b]
+      if (aVal == null) return 1
+      if (bVal == null) return -1
+      const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0
+      return sortOrder === 'asc' ? cmp : -cmp
+    })
+  }, [data?.content, sortField, sortOrder])
+
+  const sortIndicator = (field: string) =>
+    sortField === field ? (sortOrder === 'asc' ? ' ▲' : ' ▼') : ''
+
   return (
     <div>
-      <h2 className="mb-6 text-2xl font-bold text-gray-900">댓글 관리</h2>
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <h2 className="text-2xl font-bold text-gray-900">댓글 관리</h2>
+      </div>
+
+      {eventId && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">
+          <span>이벤트 #{eventId}의 댓글만 표시 중</span>
+          <button onClick={() => navigate('/comments')} className="text-blue-500 hover:text-blue-700 underline">
+            전체 보기
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSearch} className="mb-4 flex gap-2">
         <div className="relative flex-1">
@@ -80,12 +122,12 @@ export default function CommentsPage() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
-                <th scope="col" className="px-4 py-3 font-medium text-gray-600">ID</th>
-                <th scope="col" className="px-4 py-3 font-medium text-gray-600">사용자</th>
-                <th scope="col" className="px-4 py-3 font-medium text-gray-600">이벤트</th>
+                <th scope="col" onClick={() => handleSort('id')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">ID{sortIndicator('id')}</th>
+                <th scope="col" onClick={() => handleSort('userName')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">사용자{sortIndicator('userName')}</th>
+                <th scope="col" onClick={() => handleSort('eventName')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">이벤트{sortIndicator('eventName')}</th>
                 <th scope="col" className="px-4 py-3 font-medium text-gray-600">내용</th>
-                <th scope="col" className="px-4 py-3 font-medium text-gray-600">상태</th>
-                <th scope="col" className="px-4 py-3 font-medium text-gray-600">작성일</th>
+                <th scope="col" onClick={() => handleSort('commentStatus')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">상태{sortIndicator('commentStatus')}</th>
+                <th scope="col" onClick={() => handleSort('createdAt')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">작성일{sortIndicator('createdAt')}</th>
                 <th scope="col" className="px-4 py-3 font-medium text-gray-600">작업</th>
               </tr>
             </thead>
@@ -100,14 +142,14 @@ export default function CommentsPage() {
                     ))}
                   </tr>
                 ))
-              ) : data?.content.length === 0 ? (
+              ) : sortedData.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
                     검색 결과가 없습니다.
                   </td>
                 </tr>
               ) : (
-                data?.content.map((comment) => (
+                sortedData.map((comment) => (
                   <tr key={comment.id} className="transition-colors hover:bg-gray-50">
                     <td className="px-4 py-3 text-gray-900">{comment.id}</td>
                     <td className="px-4 py-3 text-gray-900">{comment.userName}</td>
@@ -154,11 +196,11 @@ export default function CommentsPage() {
                 </div>
               ))}
             </div>
-          ) : data?.content.length === 0 ? (
+          ) : sortedData.length === 0 ? (
             <p className="px-4 py-12 text-center text-gray-500">검색 결과가 없습니다.</p>
           ) : (
             <div className="divide-y divide-gray-100">
-              {data?.content.map((comment) => (
+              {sortedData.map((comment) => (
                 <div key={comment.id} className="p-4 transition-colors hover:bg-gray-50">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">

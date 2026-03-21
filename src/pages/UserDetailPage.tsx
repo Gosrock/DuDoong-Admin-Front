@@ -9,6 +9,7 @@ import { label, roleLabel, accountStateLabel } from '../lib/labels'
 import ConfirmModal from '../components/ConfirmModal'
 import ToastContainer from '../components/ToastContainer'
 import { useToast } from '../hooks/useToast'
+import { useAdminMe } from '../hooks/useAdminMe'
 
 const roles = ['USER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN']
 
@@ -30,6 +31,8 @@ export default function UserDetailPage() {
   const queryClient = useQueryClient()
   const toast = useToast()
   const userId = Number(id)
+  const { data: me } = useAdminMe()
+  const isSuperAdmin = me?.accountRole === 'SUPER_ADMIN'
 
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingRole, setPendingRole] = useState<string | null>(null)
@@ -138,24 +141,26 @@ export default function UserDetailPage() {
         </dl>
 
         <div className="mt-6 flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:flex-wrap sm:items-center">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">역할 변경:</label>
-            <select
-              value={user.accountRole}
-              onChange={(e) => {
-                setPendingRole(e.target.value)
-                setConfirmOpen(true)
-              }}
-              disabled={roleMutation.isPending}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              {roles.map((role) => (
-                <option key={role} value={role}>
-                  {label(roleLabel, role)}
-                </option>
-              ))}
-            </select>
-          </div>
+          {isSuperAdmin && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">역할 변경:</label>
+              <select
+                value={user.accountRole}
+                onChange={(e) => {
+                  setPendingRole(e.target.value)
+                  setConfirmOpen(true)
+                }}
+                disabled={roleMutation.isPending}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                {roles.map((role) => (
+                  <option key={role} value={role}>
+                    {label(roleLabel, role)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <button
             onClick={() => setStatusConfirmOpen(true)}

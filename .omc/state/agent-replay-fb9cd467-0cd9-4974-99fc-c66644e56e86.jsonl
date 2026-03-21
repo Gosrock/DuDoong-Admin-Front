@@ -1,0 +1,7 @@
+{"t":0,"agent":"aba313c","agent_type":"executor","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"a8dcb2a","agent_type":"executor","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"aba313c","agent_type":"executor","event":"agent_stop","success":true,"duration_ms":124670}
+{"t":0,"agent":"a7f8767","agent_type":"ux-researcher","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"a7f8767","agent_type":"ux-researcher","event":"agent_stop","success":true,"duration_ms":69369}
+{"t":0,"agent":"a69d51b","agent_type":"executor","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"a69d51b","agent_type":"executor","event":"agent_stop","success":true,"duration_ms":103519}

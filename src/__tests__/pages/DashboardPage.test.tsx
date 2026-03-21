@@ -26,6 +26,12 @@ describe('DashboardPage', () => {
     expect(screen.getByText('대시보드')).toBeInTheDocument()
   })
 
+  it('날짜 범위 입력 필드가 표시된다', () => {
+    renderWithProviders(<DashboardPage />)
+    expect(screen.getByLabelText('시작일')).toBeInTheDocument()
+    expect(screen.getByLabelText('종료일')).toBeInTheDocument()
+  })
+
   it('KPI 카드 라벨을 렌더링한다', async () => {
     renderWithProviders(<DashboardPage />)
     await waitFor(() => {
@@ -43,6 +49,22 @@ describe('DashboardPage', () => {
     await waitFor(() => {
       expect(screen.getByText('1,234')).toBeInTheDocument() // totalUsers
       expect(screen.getByText('675,000원')).toBeInTheDocument() // todayRevenue
+    })
+  })
+
+  it('최근 주문 섹션이 렌더링된다', async () => {
+    renderWithProviders(<DashboardPage />)
+    await waitFor(() => {
+      expect(screen.getByText('최근 주문 5건')).toBeInTheDocument()
+      expect(screen.getAllByText('테스트유저').length).toBeGreaterThan(0)
+    })
+  })
+
+  it('최근 이벤트 섹션이 렌더링된다', async () => {
+    renderWithProviders(<DashboardPage />)
+    await waitFor(() => {
+      expect(screen.getByText('최근 이벤트 5건')).toBeInTheDocument()
+      expect(screen.getAllByText('봄 콘서트').length).toBeGreaterThan(0)
     })
   })
 })

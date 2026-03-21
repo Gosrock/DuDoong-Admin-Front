@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
-import { Search, XCircle } from 'lucide-react'
-import { getOrders, cancelOrder } from '../api/admin'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Search, XCircle, Download } from 'lucide-react'
+import { getOrders, cancelOrder, exportOrders } from '../api/admin'
 import type { AdminOrder, Page } from '../types'
 import { cn } from '../lib/utils'
 import { label, orderStatusLabel } from '../lib/labels'
@@ -22,6 +22,8 @@ const statusBadge: Record<string, string> = {
 
 export default function OrdersPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const eventId = searchParams.get('eventId') ? Number(searchParams.get('eventId')) : undefined
   const queryClient = useQueryClient()
   const toast = useToast()
   const [page, setPage] = useState(0)
@@ -32,14 +34,18 @@ export default function OrdersPage() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingCancelId, setPendingCancelId] = useState<string | null>(null)
 
+  const [sortField, setSortField] = useState<string>('')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+
   const { data, isLoading } = useQuery<Page<AdminOrder>>({
-    queryKey: ['orders', page, search, status],
+    queryKey: ['orders', page, search, status, eventId],
     queryFn: () =>
       getOrders({
         page,
         size: 20,
         keyword: search || undefined,
         status: status === 'ALL' ? undefined : status,
+        eventId,
       }),
   })
 
@@ -66,11 +72,73 @@ export default function OrdersPage() {
     setConfirmOpen(true)
   }
 
+  const handleExport = async () => {
+    try {
+      const response = await exportOrders({
+        keyword: search || undefined,
+        status: status === 'ALL' ? undefined : status,
+        eventId,
+      })
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'orders.xlsx')
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch {
+      toast.error('엑셀 다운로드에 실패했습니다.')
+    }
+  }
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortOrder('asc')
+    }
+  }
+
+  const sortedData = useMemo(() => {
+    if (!sortField || !data?.content) return data?.content ?? []
+    return [...data.content].sort((a, b) => {
+      const aVal = a[sortField as keyof typeof a]
+      const bVal = b[sortField as keyof typeof b]
+      if (aVal == null) return 1
+      if (bVal == null) return -1
+      const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0
+      return sortOrder === 'asc' ? cmp : -cmp
+    })
+  }, [data?.content, sortField, sortOrder])
+
   const canCancel = (s: string) => s === 'CONFIRM' || s === 'PENDING_APPROVE'
+
+  const sortIndicator = (field: string) =>
+    sortField === field ? (sortOrder === 'asc' ? ' ▲' : ' ▼') : ''
 
   return (
     <div>
-      <h2 className="mb-6 text-2xl font-bold text-gray-900">주문 관리</h2>
+      <div className="mb-6 flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900">주문 관리</h2>
+        <button
+          onClick={handleExport}
+          className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          <Download className="h-4 w-4" />
+          엑셀 다운로드
+        </button>
+      </div>
+
+      {eventId && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">
+          <span>이벤트 #{eventId}의 주문만 표시 중</span>
+          <button onClick={() => navigate('/orders')} className="text-blue-500 hover:text-blue-700 underline">
+            전체 보기
+          </button>
+        </div>
+      )}
 
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <form onSubmit={handleSearch} className="flex flex-1 gap-2">
@@ -114,12 +182,12 @@ export default function OrdersPage() {
             <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
                 <th scope="col" className="px-4 py-3 font-medium text-gray-600">주문번호</th>
-                <th scope="col" className="px-4 py-3 font-medium text-gray-600">사용자</th>
-                <th scope="col" className="px-4 py-3 font-medium text-gray-600">이벤트</th>
+                <th scope="col" onClick={() => handleSort('userName')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">사용자{sortIndicator('userName')}</th>
+                <th scope="col" onClick={() => handleSort('eventName')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">이벤트{sortIndicator('eventName')}</th>
                 <th scope="col" className="px-4 py-3 font-medium text-gray-600">티켓</th>
-                <th scope="col" className="px-4 py-3 font-medium text-gray-600">금액</th>
-                <th scope="col" className="px-4 py-3 font-medium text-gray-600">상태</th>
-                <th scope="col" className="px-4 py-3 font-medium text-gray-600">주문일</th>
+                <th scope="col" onClick={() => handleSort('totalAmount')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">금액{sortIndicator('totalAmount')}</th>
+                <th scope="col" onClick={() => handleSort('orderStatus')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">상태{sortIndicator('orderStatus')}</th>
+                <th scope="col" onClick={() => handleSort('createdAt')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">주문일{sortIndicator('createdAt')}</th>
                 <th scope="col" className="px-4 py-3 font-medium text-gray-600">작업</th>
               </tr>
             </thead>
@@ -134,14 +202,14 @@ export default function OrdersPage() {
                     ))}
                   </tr>
                 ))
-              ) : data?.content.length === 0 ? (
+              ) : sortedData.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
                     검색 결과가 없습니다.
                   </td>
                 </tr>
               ) : (
-                data?.content.map((order) => (
+                sortedData.map((order) => (
                   <tr key={order.orderId} onClick={() => navigate(`/orders/${order.orderId}`)} className="cursor-pointer transition-colors hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono text-xs text-gray-900">
                       {order.orderId.slice(0, 8)}...
@@ -191,11 +259,11 @@ export default function OrdersPage() {
                 </div>
               ))}
             </div>
-          ) : data?.content.length === 0 ? (
+          ) : sortedData.length === 0 ? (
             <p className="px-4 py-12 text-center text-gray-500">검색 결과가 없습니다.</p>
           ) : (
             <div className="divide-y divide-gray-100">
-              {data?.content.map((order) => (
+              {sortedData.map((order) => (
                 <div
                   key={order.orderId}
                   onClick={() => navigate(`/orders/${order.orderId}`)}
@@ -267,7 +335,7 @@ export default function OrdersPage() {
         open={confirmOpen}
         title="주문 취소"
         description="이 주문을 취소하시겠습니까?"
-        confirmLabel="취소"
+        confirmLabel="주문 취소"
         variant="danger"
         onConfirm={() => {
           if (pendingCancelId) cancelMutation.mutate(pendingCancelId)

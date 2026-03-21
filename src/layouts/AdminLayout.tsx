@@ -6,6 +6,7 @@ import {
   Calendar,
   ShoppingCart,
   MessageSquare,
+  Building2,
   LogOut,
   Menu,
   X,
@@ -15,6 +16,7 @@ import { cn, getMainSiteUrl } from '../lib/utils'
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: '대시보드', end: true },
   { to: '/users', icon: Users, label: '사용자 관리' },
+  { to: '/hosts', icon: Building2, label: '호스트 관리' },
   { to: '/events', icon: Calendar, label: '이벤트 관리' },
   { to: '/orders', icon: ShoppingCart, label: '주문 관리' },
   { to: '/comments', icon: MessageSquare, label: '댓글 관리' },

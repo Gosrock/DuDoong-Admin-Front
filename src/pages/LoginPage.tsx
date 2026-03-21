@@ -38,6 +38,9 @@ export default function LoginPage() {
             <p className="text-xs text-gray-400">
               ADMIN 이상 권한이 필요합니다.
             </p>
+            <a href={mainSiteUrl} className="mt-4 block text-center text-sm text-blue-600 hover:text-blue-800 underline">
+              다른 계정으로 로그인
+            </a>
           </div>
         ) : (
           <>

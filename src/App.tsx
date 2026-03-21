@@ -10,6 +10,8 @@ import EventDetailPage from './pages/EventDetailPage'
 import OrdersPage from './pages/OrdersPage'
 import OrderDetailPage from './pages/OrderDetailPage'
 import CommentsPage from './pages/CommentsPage'
+import HostsPage from './pages/HostsPage'
+import HostDetailPage from './pages/HostDetailPage'
 import { hasAuthCookie } from './lib/utils'
 
 const queryClient = new QueryClient()
@@ -41,6 +43,8 @@ export default function App() {
             <Route path="orders" element={<OrdersPage />} />
             <Route path="orders/:uuid" element={<OrderDetailPage />} />
             <Route path="comments" element={<CommentsPage />} />
+            <Route path="hosts" element={<HostsPage />} />
+            <Route path="hosts/:id" element={<HostDetailPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

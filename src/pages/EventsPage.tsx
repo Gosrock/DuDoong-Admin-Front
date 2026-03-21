@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Search, Trash2 } from 'lucide-react'
-import { getEvents, deleteEvent } from '../api/admin'
+import { Search, Trash2, Download } from 'lucide-react'
+import { getEvents, deleteEvent, exportEvents } from '../api/admin'
 import type { AdminEvent, Page } from '../types'
 import { cn } from '../lib/utils'
 import { label, eventStatusLabel } from '../lib/labels'
@@ -31,6 +31,9 @@ export default function EventsPage() {
 
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<{ id: number; name: string } | null>(null)
+
+  const [sortField, setSortField] = useState<string>('')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
   const { data, isLoading } = useQuery<Page<AdminEvent>>({
     queryKey: ['events', page, search, status],
@@ -66,9 +69,61 @@ export default function EventsPage() {
     setConfirmOpen(true)
   }
 
+  const handleExport = async () => {
+    try {
+      const response = await exportEvents({
+        keyword: search || undefined,
+        status: status === 'ALL' ? undefined : status,
+      })
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'events.xlsx')
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch {
+      toast.error('엑셀 다운로드에 실패했습니다.')
+    }
+  }
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortOrder('asc')
+    }
+  }
+
+  const sortedData = useMemo(() => {
+    if (!sortField || !data?.content) return data?.content ?? []
+    return [...data.content].sort((a, b) => {
+      const aVal = a[sortField as keyof typeof a]
+      const bVal = b[sortField as keyof typeof b]
+      if (aVal == null) return 1
+      if (bVal == null) return -1
+      const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0
+      return sortOrder === 'asc' ? cmp : -cmp
+    })
+  }, [data?.content, sortField, sortOrder])
+
+  const sortIndicator = (field: string) =>
+    sortField === field ? (sortOrder === 'asc' ? ' ▲' : ' ▼') : ''
+
   return (
     <div>
-      <h2 className="mb-6 text-2xl font-bold text-gray-900">이벤트 관리</h2>
+      <div className="mb-6 flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900">이벤트 관리</h2>
+        <button
+          onClick={handleExport}
+          className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          <Download className="h-4 w-4" />
+          엑셀 다운로드
+        </button>
+      </div>
 
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <form onSubmit={handleSearch} className="flex flex-1 gap-2">
@@ -111,12 +166,12 @@ export default function EventsPage() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
-                <th scope="col" className="px-4 py-3 font-medium text-gray-600">ID</th>
-                <th scope="col" className="px-4 py-3 font-medium text-gray-600">이벤트명</th>
-                <th scope="col" className="px-4 py-3 font-medium text-gray-600">호스트</th>
-                <th scope="col" className="px-4 py-3 font-medium text-gray-600">상태</th>
-                <th scope="col" className="px-4 py-3 font-medium text-gray-600">시작일</th>
-                <th scope="col" className="px-4 py-3 font-medium text-gray-600">생성일</th>
+                <th scope="col" onClick={() => handleSort('id')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">ID{sortIndicator('id')}</th>
+                <th scope="col" onClick={() => handleSort('name')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">이벤트명{sortIndicator('name')}</th>
+                <th scope="col" onClick={() => handleSort('hostName')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">호스트{sortIndicator('hostName')}</th>
+                <th scope="col" onClick={() => handleSort('status')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">상태{sortIndicator('status')}</th>
+                <th scope="col" onClick={() => handleSort('startAt')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">시작일{sortIndicator('startAt')}</th>
+                <th scope="col" onClick={() => handleSort('createdAt')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">생성일{sortIndicator('createdAt')}</th>
                 <th scope="col" className="px-4 py-3 font-medium text-gray-600">작업</th>
               </tr>
             </thead>
@@ -131,14 +186,14 @@ export default function EventsPage() {
                     ))}
                   </tr>
                 ))
-              ) : data?.content.length === 0 ? (
+              ) : sortedData.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
                     검색 결과가 없습니다.
                   </td>
                 </tr>
               ) : (
-                data?.content.map((event) => (
+                sortedData.map((event) => (
                   <tr key={event.id} onClick={() => navigate(`/events/${event.id}`)} className="cursor-pointer transition-colors hover:bg-gray-50">
                     <td className="px-4 py-3 text-gray-900">{event.id}</td>
                     <td className="px-4 py-3 font-medium text-gray-900">{event.name}</td>
@@ -183,11 +238,11 @@ export default function EventsPage() {
                 </div>
               ))}
             </div>
-          ) : data?.content.length === 0 ? (
+          ) : sortedData.length === 0 ? (
             <p className="px-4 py-12 text-center text-gray-500">검색 결과가 없습니다.</p>
           ) : (
             <div className="divide-y divide-gray-100">
-              {data?.content.map((event) => (
+              {sortedData.map((event) => (
                 <div
                   key={event.id}
                   onClick={() => navigate(`/events/${event.id}`)}

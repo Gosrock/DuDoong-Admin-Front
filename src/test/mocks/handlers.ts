@@ -12,6 +12,12 @@ export const handlers = [
         todayRevenue: 675000,
         activeEvents: 8,
         todayRefunds: 3,
+        recentOrders: [
+          { orderId: 'uuid-1234-5678', userName: '테스트유저', eventName: '봄 콘서트', ticketName: '일반석', totalAmount: 15000, orderStatus: 'CONFIRM', createdAt: '2026-03-15T10:00:00' },
+        ],
+        recentEvents: [
+          { id: 1, name: '봄 콘서트', hostName: '고스락', status: 'OPEN', startAt: '2026-04-01T18:00:00', runTime: 120, createdAt: '2026-03-01T00:00:00' },
+        ],
       },
     })
   ),
@@ -115,5 +121,16 @@ export const handlers = [
         totalElements: 1, totalPages: 1, number: 0, size: 20,
       },
     })
+  ),
+
+  // Export endpoints
+  http.get('*/internal-api/v1/orders/export', () =>
+    new HttpResponse(new Blob(['mock'], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), { status: 200 })
+  ),
+  http.get('*/internal-api/v1/users/export', () =>
+    new HttpResponse(new Blob(['mock'], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), { status: 200 })
+  ),
+  http.get('*/internal-api/v1/events/export', () =>
+    new HttpResponse(new Blob(['mock'], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), { status: 200 })
   ),
 ]

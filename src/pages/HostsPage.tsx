@@ -1,29 +1,13 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Search, Download } from 'lucide-react'
-import { getUsers, exportUsers } from '../api/admin'
-import type { AdminUser, Page } from '../types'
+import { Search } from 'lucide-react'
+import { getHosts } from '../api/admin'
+import type { AdminHost, Page } from '../types'
 import { cn } from '../lib/utils'
-import { label, roleLabel, accountStateLabel } from '../lib/labels'
-import { useToast } from '../hooks/useToast'
-import ToastContainer from '../components/ToastContainer'
 
-const roleBadge: Record<string, string> = {
-  SUPER_ADMIN: 'bg-red-100 text-red-700',
-  ADMIN: 'bg-orange-100 text-orange-700',
-  MANAGER: 'bg-blue-100 text-blue-700',
-  USER: 'bg-gray-100 text-gray-700',
-}
-
-const statusBadge: Record<string, string> = {
-  NORMAL: 'bg-green-100 text-green-700',
-  DELETED: 'bg-red-100 text-red-700',
-}
-
-export default function UsersPage() {
+export default function HostsPage() {
   const navigate = useNavigate()
-  const toast = useToast()
   const [page, setPage] = useState(0)
   const [keyword, setKeyword] = useState('')
   const [search, setSearch] = useState('')
@@ -31,31 +15,15 @@ export default function UsersPage() {
   const [sortField, setSortField] = useState<string>('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
-  const { data, isLoading } = useQuery<Page<AdminUser>>({
-    queryKey: ['users', page, search],
-    queryFn: () => getUsers({ page, size: 20, keyword: search || undefined }),
+  const { data, isLoading } = useQuery<Page<AdminHost>>({
+    queryKey: ['hosts', page, search],
+    queryFn: () => getHosts({ page, size: 20, keyword: search || undefined }),
   })
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     setSearch(keyword)
     setPage(0)
-  }
-
-  const handleExport = async () => {
-    try {
-      const response = await exportUsers({ keyword: search || undefined })
-      const url = window.URL.createObjectURL(new Blob([response.data]))
-      const link = document.createElement('a')
-      link.href = url
-      link.setAttribute('download', 'users.xlsx')
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      window.URL.revokeObjectURL(url)
-    } catch {
-      toast.error('엑셀 다운로드에 실패했습니다.')
-    }
   }
 
   const handleSort = (field: string) => {
@@ -84,16 +52,7 @@ export default function UsersPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">사용자 관리</h2>
-        <button
-          onClick={handleExport}
-          className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          <Download className="h-4 w-4" />
-          엑셀 다운로드
-        </button>
-      </div>
+      <h2 className="mb-6 text-2xl font-bold text-gray-900">호스트 관리</h2>
 
       <form onSubmit={handleSearch} className="mb-4 flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
@@ -102,7 +61,7 @@ export default function UsersPage() {
             type="text"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="이름 또는 이메일로 검색"
+            placeholder="이름으로 검색"
             className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
@@ -122,10 +81,10 @@ export default function UsersPage() {
               <tr>
                 <th scope="col" onClick={() => handleSort('id')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">ID{sortIndicator('id')}</th>
                 <th scope="col" onClick={() => handleSort('name')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">이름{sortIndicator('name')}</th>
-                <th scope="col" onClick={() => handleSort('email')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">이메일{sortIndicator('email')}</th>
-                <th scope="col" onClick={() => handleSort('accountRole')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">역할{sortIndicator('accountRole')}</th>
-                <th scope="col" onClick={() => handleSort('accountState')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">상태{sortIndicator('accountState')}</th>
-                <th scope="col" onClick={() => handleSort('createdAt')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">가입일{sortIndicator('createdAt')}</th>
+                <th scope="col" className="px-4 py-3 font-medium text-gray-600">소개</th>
+                <th scope="col" onClick={() => handleSort('contactEmail')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">대표 이메일{sortIndicator('contactEmail')}</th>
+                <th scope="col" onClick={() => handleSort('partner')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">파트너{sortIndicator('partner')}</th>
+                <th scope="col" onClick={() => handleSort('createdAt')} className="cursor-pointer select-none px-4 py-3 font-medium text-gray-600">생성일{sortIndicator('createdAt')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -146,27 +105,26 @@ export default function UsersPage() {
                   </td>
                 </tr>
               ) : (
-                sortedData.map((user) => (
+                sortedData.map((host) => (
                   <tr
-                    key={user.id}
-                    onClick={() => navigate(`/users/${user.id}`)}
+                    key={host.id}
+                    onClick={() => navigate(`/hosts/${host.id}`)}
                     className="cursor-pointer transition-colors hover:bg-gray-50"
                   >
-                    <td className="px-4 py-3 text-gray-900">{user.id}</td>
-                    <td className="px-4 py-3 font-medium text-gray-900">{user.name}</td>
-                    <td className="px-4 py-3 text-gray-600">{user.email}</td>
+                    <td className="px-4 py-3 text-gray-900">{host.id}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900">{host.name}</td>
+                    <td className="max-w-xs px-4 py-3 truncate text-gray-600">{host.introduce ?? '-'}</td>
+                    <td className="px-4 py-3 text-gray-600">{host.contactEmail ?? '-'}</td>
                     <td className="px-4 py-3">
-                      <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-xs font-medium', roleBadge[user.accountRole] ?? 'bg-gray-100 text-gray-700')}>
-                        {label(roleLabel, user.accountRole)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-xs font-medium', statusBadge[user.accountState] ?? 'bg-gray-100 text-gray-700')}>
-                        {label(accountStateLabel, user.accountState)}
+                      <span className={cn(
+                        'inline-block rounded-full px-2.5 py-0.5 text-xs font-medium',
+                        host.partner ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                      )}>
+                        {host.partner ? '파트너' : '일반'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-500">
-                      {new Date(user.createdAt).toLocaleDateString('ko-KR')}
+                      {new Date(host.createdAt).toLocaleDateString('ko-KR')}
                     </td>
                   </tr>
                 ))
@@ -191,28 +149,26 @@ export default function UsersPage() {
             <p className="px-4 py-12 text-center text-gray-500">검색 결과가 없습니다.</p>
           ) : (
             <div className="divide-y divide-gray-100">
-              {sortedData.map((user) => (
+              {sortedData.map((host) => (
                 <div
-                  key={user.id}
-                  onClick={() => navigate(`/users/${user.id}`)}
+                  key={host.id}
+                  onClick={() => navigate(`/hosts/${host.id}`)}
                   className="cursor-pointer p-4 transition-colors hover:bg-gray-50"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="font-medium text-gray-900">{user.name}</p>
-                      <p className="mt-0.5 truncate text-sm text-gray-500">{user.email}</p>
+                      <p className="font-medium text-gray-900">{host.name}</p>
+                      <p className="mt-0.5 truncate text-sm text-gray-500">{host.contactEmail ?? '-'}</p>
                     </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-xs font-medium', roleBadge[user.accountRole] ?? 'bg-gray-100 text-gray-700')}>
-                        {label(roleLabel, user.accountRole)}
-                      </span>
-                      <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-xs font-medium', statusBadge[user.accountState] ?? 'bg-gray-100 text-gray-700')}>
-                        {label(accountStateLabel, user.accountState)}
-                      </span>
-                    </div>
+                    <span className={cn(
+                      'shrink-0 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium',
+                      host.partner ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                    )}>
+                      {host.partner ? '파트너' : '일반'}
+                    </span>
                   </div>
                   <p className="mt-1.5 text-xs text-gray-400">
-                    가입일: {new Date(user.createdAt).toLocaleDateString('ko-KR')}
+                    생성일: {new Date(host.createdAt).toLocaleDateString('ko-KR')}
                   </p>
                 </div>
               ))}
@@ -223,7 +179,7 @@ export default function UsersPage() {
         {data && (
           <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
             <p className="text-sm text-gray-500">
-              총 {data.totalElements.toLocaleString()}명
+              총 {data.totalElements.toLocaleString()}개
             </p>
             {data.totalPages > 1 && (
               <div className="flex gap-1">
@@ -249,8 +205,6 @@ export default function UsersPage() {
           </div>
         )}
       </div>
-
-      <ToastContainer toasts={toast.toasts} />
     </div>
   )
 }

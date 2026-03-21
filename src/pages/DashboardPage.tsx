@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Users,
@@ -8,8 +9,9 @@ import {
   RotateCcw,
 } from 'lucide-react'
 import { getDashboard } from '../api/admin'
-import type { DashboardData } from '../types'
+import type { AdminDashboard } from '../types'
 import { cn } from '../lib/utils'
+import { label, orderStatusLabel, eventStatusLabel } from '../lib/labels'
 
 const statCards = [
   { key: 'totalUsers' as const, label: '전체 사용자', icon: Users, color: 'text-blue-600 bg-blue-100' },
@@ -19,6 +21,22 @@ const statCards = [
   { key: 'activeEvents' as const, label: '진행중 이벤트', icon: Calendar, color: 'text-indigo-600 bg-indigo-100' },
   { key: 'todayRefunds' as const, label: '오늘 환불', icon: RotateCcw, color: 'text-red-600 bg-red-100' },
 ]
+
+const orderStatusBadge: Record<string, string> = {
+  CONFIRM: 'bg-green-100 text-green-700',
+  PENDING_APPROVE: 'bg-yellow-100 text-yellow-700',
+  REFUND: 'bg-orange-100 text-orange-700',
+  CANCELED: 'bg-red-100 text-red-700',
+  FAILED: 'bg-red-100 text-red-700',
+}
+
+const eventStatusBadge: Record<string, string> = {
+  PREPARING: 'bg-yellow-100 text-yellow-700',
+  OPEN: 'bg-green-100 text-green-700',
+  CALCULATING: 'bg-blue-100 text-blue-700',
+  CLOSED: 'bg-gray-100 text-gray-700',
+  DELETED: 'bg-red-100 text-red-700',
+}
 
 function formatValue(value: number, format?: string) {
   if (format === 'currency') {
@@ -42,9 +60,19 @@ function SkeletonCard() {
 }
 
 export default function DashboardPage() {
-  const { data, isLoading, isError, refetch } = useQuery<DashboardData>({
-    queryKey: ['dashboard'],
-    queryFn: getDashboard,
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+
+  const params = useMemo(() => {
+    const p: { startDate?: string; endDate?: string } = {}
+    if (startDate) p.startDate = startDate
+    if (endDate) p.endDate = endDate
+    return p
+  }, [startDate, endDate])
+
+  const { data, isLoading, isError, refetch } = useQuery<AdminDashboard>({
+    queryKey: ['dashboard', params],
+    queryFn: () => getDashboard(params),
   })
 
   if (isError) {
@@ -69,6 +97,39 @@ export default function DashboardPage() {
     <div>
       <h2 className="mb-6 text-2xl font-bold text-gray-900">대시보드</h2>
 
+      {/* Date range filter */}
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <label htmlFor="dashboard-start-date" className="text-sm font-medium text-gray-700">시작일</label>
+          <input
+            id="dashboard-start-date"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="dashboard-end-date" className="text-sm font-medium text-gray-700">종료일</label>
+          <input
+            id="dashboard-end-date"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+        {(startDate || endDate) && (
+          <button
+            onClick={() => { setStartDate(''); setEndDate('') }}
+            className="text-sm text-gray-500 hover:text-gray-700 underline"
+          >
+            초기화
+          </button>
+        )}
+      </div>
+
+      {/* KPI cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {isLoading || !data
           ? statCards.map((card) => <SkeletonCard key={card.key} />)
@@ -96,6 +157,96 @@ export default function DashboardPage() {
               </div>
             ))}
       </div>
+
+      {/* Recent orders */}
+      {data && (
+        <div className="mt-8">
+          <h3 className="mb-3 text-base font-semibold text-gray-900">최근 주문 5건</h3>
+          <div className="overflow-hidden rounded-xl bg-white shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-gray-200 bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 font-medium text-gray-600">주문번호</th>
+                    <th className="px-4 py-3 font-medium text-gray-600">사용자</th>
+                    <th className="px-4 py-3 font-medium text-gray-600">이벤트</th>
+                    <th className="px-4 py-3 font-medium text-gray-600">금액</th>
+                    <th className="px-4 py-3 font-medium text-gray-600">상태</th>
+                    <th className="px-4 py-3 font-medium text-gray-600">주문일</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {!data.recentOrders || data.recentOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-gray-500">최근 주문이 없습니다.</td>
+                    </tr>
+                  ) : (
+                    data.recentOrders.map((order) => (
+                      <tr key={order.orderId} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-mono text-xs text-gray-900">{order.orderId.slice(0, 8)}...</td>
+                        <td className="px-4 py-3 text-gray-900">{order.userName}</td>
+                        <td className="px-4 py-3 text-gray-600">{order.eventName}</td>
+                        <td className="px-4 py-3 text-gray-900">{order.totalAmount.toLocaleString('ko-KR')}원</td>
+                        <td className="px-4 py-3">
+                          <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-xs font-medium', orderStatusBadge[order.orderStatus] ?? 'bg-gray-100 text-gray-700')}>
+                            {label(orderStatusLabel, order.orderStatus)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-500">{new Date(order.createdAt).toLocaleDateString('ko-KR')}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recent events */}
+      {data && (
+        <div className="mt-6">
+          <h3 className="mb-3 text-base font-semibold text-gray-900">최근 이벤트 5건</h3>
+          <div className="overflow-hidden rounded-xl bg-white shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-gray-200 bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 font-medium text-gray-600">ID</th>
+                    <th className="px-4 py-3 font-medium text-gray-600">이벤트명</th>
+                    <th className="px-4 py-3 font-medium text-gray-600">호스트</th>
+                    <th className="px-4 py-3 font-medium text-gray-600">상태</th>
+                    <th className="px-4 py-3 font-medium text-gray-600">시작일</th>
+                    <th className="px-4 py-3 font-medium text-gray-600">생성일</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {!data.recentEvents || data.recentEvents.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-gray-500">최근 이벤트가 없습니다.</td>
+                    </tr>
+                  ) : (
+                    data.recentEvents.map((event) => (
+                      <tr key={event.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-gray-900">{event.id}</td>
+                        <td className="px-4 py-3 font-medium text-gray-900">{event.name}</td>
+                        <td className="px-4 py-3 text-gray-600">{event.hostName}</td>
+                        <td className="px-4 py-3">
+                          <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-xs font-medium', eventStatusBadge[event.status] ?? 'bg-gray-100 text-gray-700')}>
+                            {label(eventStatusLabel, event.status)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-500">{new Date(event.startAt).toLocaleDateString('ko-KR')}</td>
+                        <td className="px-4 py-3 text-gray-500">{new Date(event.createdAt).toLocaleDateString('ko-KR')}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

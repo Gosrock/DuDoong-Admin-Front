@@ -1,11 +1,16 @@
-export interface DashboardData {
+export interface AdminDashboard {
   totalUsers: number
   todayNewUsers: number
   todayOrders: number
   todayRevenue: number
   activeEvents: number
   todayRefunds: number
+  recentOrders: AdminOrder[]
+  recentEvents: AdminEvent[]
 }
+
+/** @deprecated use AdminDashboard */
+export type DashboardData = AdminDashboard
 
 export interface AdminUser {
   id: number
@@ -33,6 +38,25 @@ export interface AdminEvent {
   createdAt: string
 }
 
+export interface AdminEventDetail extends AdminEvent {
+  ticketItemCount: number
+  issuedTicketCount: number
+  totalOrderCount: number
+  content: string | null
+  placeName: string | null
+  placeAddress: string | null
+}
+
+export interface AdminIssuedTicket {
+  issuedTicketNo: string
+  userName: string
+  ticketName: string
+  orderUuid: string
+  enteredAt: string | null
+  status: string
+  createdAt: string
+}
+
 export interface AdminOrder {
   orderId: string
   userName: string
@@ -49,6 +73,26 @@ export interface AdminComment {
   eventName: string
   content: string
   commentStatus: string
+  createdAt: string
+}
+
+export interface AdminHost {
+  id: number
+  name: string
+  introduce: string | null
+  contactEmail: string | null
+  contactNumber: string | null
+  profileImage: string | null
+  partner: boolean
+  masterUserId: number
+  createdAt: string
+}
+
+export interface AdminHostMember {
+  userId: number
+  userName: string
+  role: string
+  active: boolean
   createdAt: string
 }
 

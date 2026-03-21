@@ -147,7 +147,7 @@ export default function OrderDetailPage() {
         open={confirmOpen}
         title="주문 강제 취소"
         description="이 주문을 강제 취소하시겠습니까?"
-        confirmLabel="취소"
+        confirmLabel="주문 취소"
         variant="danger"
         onConfirm={() => {
           cancelMutation.mutate()
