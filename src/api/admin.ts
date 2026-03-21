@@ -68,6 +68,10 @@ export const removeHostMember = (hostId: number, userId: number) =>
   client.delete(`/internal-api/v1/hosts/${hostId}/members/${userId}`)
 export const updateHostPartner = (hostId: number, partner: boolean) =>
   client.patch(`/internal-api/v1/hosts/${hostId}/partner`, { partner }).then(r => r.data.data)
+export const updateHostProfile = (hostId: number, data: {
+  name?: string; introduce?: string; contactEmail?: string; contactNumber?: string;
+}) =>
+  client.patch(`/internal-api/v1/hosts/${hostId}/profile`, data).then(r => r.data.data)
 export const getHostEvents = (hostId: number, params: { page?: number; size?: number }) =>
   client.get(`/internal-api/v1/hosts/${hostId}/events`, { params }).then(r => r.data.data)
 

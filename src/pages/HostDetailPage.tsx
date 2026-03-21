@@ -9,6 +9,7 @@ import {
   addHostMember,
   removeHostMember,
   updateHostPartner,
+  updateHostProfile,
 } from '../api/admin'
 import type { AdminHost, AdminHostMember } from '../types'
 import { cn } from '../lib/utils'
@@ -36,6 +37,11 @@ export default function HostDetailPage() {
   const [addRole, setAddRole] = useState('GUEST')
   const [pendingRoleChange, setPendingRoleChange] = useState<{ userId: number; role: string } | null>(null)
   const [roleConfirmOpen, setRoleConfirmOpen] = useState(false)
+  const [profileEditOpen, setProfileEditOpen] = useState(false)
+  const [profileName, setProfileName] = useState('')
+  const [profileIntroduce, setProfileIntroduce] = useState('')
+  const [profileContactEmail, setProfileContactEmail] = useState('')
+  const [profileContactNumber, setProfileContactNumber] = useState('')
 
   const { data: host, isLoading: hostLoading } = useQuery<AdminHost>({
     queryKey: ['host', hostId],
@@ -96,6 +102,20 @@ export default function HostDetailPage() {
     },
     onError: () => {
       toast.error('멤버 제거에 실패했습니다.')
+    },
+  })
+
+  const profileMutation = useMutation({
+    mutationFn: (data: { name?: string; introduce?: string; contactEmail?: string; contactNumber?: string }) =>
+      updateHostProfile(hostId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['host', hostId] })
+      queryClient.invalidateQueries({ queryKey: ['hosts'] })
+      toast.success('프로필이 수정되었습니다.')
+      setProfileEditOpen(false)
+    },
+    onError: () => {
+      toast.error('프로필 수정에 실패했습니다.')
     },
   })
 
@@ -177,6 +197,18 @@ export default function HostDetailPage() {
               {host.partner ? '파트너 해제' : '파트너 설정'}
             </button>
           )}
+          <button
+            onClick={() => {
+              setProfileName(host.name ?? '')
+              setProfileIntroduce(host.introduce ?? '')
+              setProfileContactEmail(host.contactEmail ?? '')
+              setProfileContactNumber(host.contactNumber ?? '')
+              setProfileEditOpen(true)
+            }}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            프로필 수정
+          </button>
           <Link
             to={`/events?hostId=${host.id}`}
             className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -372,6 +404,79 @@ export default function HostDetailPage() {
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
               >
                 추가
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 프로필 수정 모달 */}
+      {profileEditOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="mb-4 text-base font-semibold text-gray-900">프로필 수정</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">이름</label>
+                <input
+                  type="text"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  placeholder="호스트 이름"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">소개</label>
+                <textarea
+                  value={profileIntroduce}
+                  onChange={(e) => setProfileIntroduce(e.target.value)}
+                  placeholder="간단 소개"
+                  rows={3}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">대표 이메일</label>
+                <input
+                  type="email"
+                  value={profileContactEmail}
+                  onChange={(e) => setProfileContactEmail(e.target.value)}
+                  placeholder="example@email.com"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">대표 연락처</label>
+                <input
+                  type="text"
+                  value={profileContactNumber}
+                  onChange={(e) => setProfileContactNumber(e.target.value)}
+                  placeholder="010-0000-0000"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setProfileEditOpen(false)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => {
+                  profileMutation.mutate({
+                    name: profileName || undefined,
+                    introduce: profileIntroduce || undefined,
+                    contactEmail: profileContactEmail || undefined,
+                    contactNumber: profileContactNumber || undefined,
+                  })
+                }}
+                disabled={profileMutation.isPending}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                저장
               </button>
             </div>
           </div>
