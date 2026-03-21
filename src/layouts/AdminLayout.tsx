@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet } from 'react-router-dom'
 import {
   LayoutDashboard,
   Users,
@@ -21,7 +21,6 @@ const navItems = [
 ]
 
 export default function AdminLayout() {
-  const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const handleLogout = () => {
