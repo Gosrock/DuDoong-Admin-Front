@@ -12,17 +12,11 @@ export function getMainSiteUrl(): string {
   return 'http://localhost:3000'
 }
 
-export function getAccessTokenCookieName(): string {
-  const host = window.location.hostname
-  if (host.includes('staging')) return 'stg_accessToken'
-  return 'accessToken'
-}
-
 export function getCookie(name: string): string | null {
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`))
   return match ? decodeURIComponent(match[1]) : null
 }
 
 export function hasAuthCookie(): boolean {
-  return getCookie(getAccessTokenCookieName()) !== null
+  return getCookie('accessToken') !== null
 }
