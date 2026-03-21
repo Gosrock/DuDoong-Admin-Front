@@ -8,9 +8,7 @@ import LoginPage from '../../pages/LoginPage'
 beforeAll(() => server.listen())
 afterEach(() => {
   server.resetHandlers()
-  // 쿠키 초기화
   document.cookie = 'accessToken=; max-age=0'
-  document.cookie = 'stg_accessToken=; max-age=0'
 })
 afterAll(() => server.close())
 
