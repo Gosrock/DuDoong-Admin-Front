@@ -22,7 +22,7 @@ const statusBadge: Record<string, string> = {
 
 export default function OrdersPage() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const eventId = searchParams.get('eventId') ? Number(searchParams.get('eventId')) : undefined
   const queryClient = useQueryClient()
   const toast = useToast()
@@ -34,6 +34,7 @@ export default function OrdersPage() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingCancelId, setPendingCancelId] = useState<string | null>(null)
 
+  const [eventIdInput, setEventIdInput] = useState(eventId ? String(eventId) : '')
   const [sortField, setSortField] = useState<string>('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
@@ -134,7 +135,7 @@ export default function OrdersPage() {
       {eventId && (
         <div className="mb-4 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">
           <span>이벤트 #{eventId}의 주문만 표시 중</span>
-          <button onClick={() => navigate('/orders')} className="text-blue-500 hover:text-blue-700 underline">
+          <button onClick={() => { setEventIdInput(''); navigate('/orders') }} className="text-blue-500 hover:text-blue-700 underline">
             전체 보기
           </button>
         </div>
@@ -159,6 +160,23 @@ export default function OrdersPage() {
             검색
           </button>
         </form>
+        <input
+          type="number"
+          placeholder="이벤트 ID"
+          value={eventIdInput}
+          onChange={(e) => setEventIdInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              if (eventIdInput) {
+                setSearchParams({ eventId: eventIdInput })
+              } else {
+                setSearchParams({})
+              }
+              setPage(0)
+            }
+          }}
+          className="w-32 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
         <select
           value={status}
           onChange={(e) => {

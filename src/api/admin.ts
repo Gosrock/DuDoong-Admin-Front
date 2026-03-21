@@ -30,6 +30,14 @@ export const updateEvent = (eventId: number, data: {
   client.patch(`/internal-api/v1/events/${eventId}`, data).then(r => r.data.data)
 export const getEventIssuedTickets = (eventId: number, params: { page?: number; size?: number }) =>
   client.get(`/internal-api/v1/events/${eventId}/issued-tickets`, { params }).then(r => r.data.data)
+export const getEventTicketItems = (eventId: number) =>
+  client.get(`/internal-api/v1/events/${eventId}/ticket-items`).then(r => r.data.data)
+export const updateTicketItem = (eventId: number, ticketItemId: number, data: {
+  name?: string; description?: string; price?: number; quantity?: number; purchaseLimit?: number;
+}) =>
+  client.patch(`/internal-api/v1/events/${eventId}/ticket-items/${ticketItemId}`, data).then(r => r.data.data)
+export const adjustTicketStock = (eventId: number, ticketItemId: number, delta: number) =>
+  client.post(`/internal-api/v1/events/${eventId}/ticket-items/${ticketItemId}/adjust-stock`, { delta }).then(r => r.data.data)
 
 // Orders
 export const getOrders = (params: { page?: number; size?: number; keyword?: string; status?: string; eventId?: number }) =>
@@ -70,6 +78,10 @@ export const exportUsers = (params: { keyword?: string }) =>
   client.get('/internal-api/v1/users/export', { responseType: 'blob', params })
 export const exportEvents = (params: { keyword?: string; status?: string }) =>
   client.get('/internal-api/v1/events/export', { responseType: 'blob', params })
+export const exportTicketItems = (eventId: number) =>
+  client.get(`/internal-api/v1/events/${eventId}/ticket-items/export`, { responseType: 'blob' })
+export const exportIssuedTickets = (eventId: number) =>
+  client.get(`/internal-api/v1/events/${eventId}/issued-tickets/export`, { responseType: 'blob' })
 
 // Auth
 export const getAdminMe = () =>

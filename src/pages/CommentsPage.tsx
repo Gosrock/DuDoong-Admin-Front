@@ -16,7 +16,7 @@ const statusBadge: Record<string, string> = {
 }
 
 export default function CommentsPage() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const eventId = searchParams.get('eventId') ? Number(searchParams.get('eventId')) : undefined
   const queryClient = useQueryClient()
@@ -28,6 +28,7 @@ export default function CommentsPage() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
 
+  const [eventIdInput, setEventIdInput] = useState(eventId ? String(eventId) : '')
   const [sortField, setSortField] = useState<string>('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
@@ -91,30 +92,49 @@ export default function CommentsPage() {
       {eventId && (
         <div className="mb-4 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">
           <span>이벤트 #{eventId}의 댓글만 표시 중</span>
-          <button onClick={() => navigate('/comments')} className="text-blue-500 hover:text-blue-700 underline">
+          <button onClick={() => { setEventIdInput(''); navigate('/comments') }} className="text-blue-500 hover:text-blue-700 underline">
             전체 보기
           </button>
         </div>
       )}
 
-      <form onSubmit={handleSearch} className="mb-4 flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder="사용자명, 이벤트명 또는 댓글 내용 검색"
-            className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
-        </div>
-        <button
-          type="submit"
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          검색
-        </button>
-      </form>
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <form onSubmit={handleSearch} className="flex flex-1 gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="사용자명, 이벤트명 또는 댓글 내용 검색"
+              className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <button
+            type="submit"
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            검색
+          </button>
+        </form>
+        <input
+          type="number"
+          placeholder="이벤트 ID"
+          value={eventIdInput}
+          onChange={(e) => setEventIdInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              if (eventIdInput) {
+                setSearchParams({ eventId: eventIdInput })
+              } else {
+                setSearchParams({})
+              }
+              setPage(0)
+            }
+          }}
+          className="w-32 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+      </div>
 
       <div className="overflow-hidden rounded-xl bg-white shadow-sm">
         {/* Desktop table */}

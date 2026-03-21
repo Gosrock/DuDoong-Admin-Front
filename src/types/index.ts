@@ -47,6 +47,18 @@ export interface AdminEventDetail extends AdminEvent {
   placeAddress: string | null
 }
 
+export interface AdminTicketItem {
+  id: number
+  name: string
+  description: string | null
+  price: number
+  quantity: number
+  supplyCount: number
+  purchaseLimit: number
+  type: string
+  createdAt: string
+}
+
 export interface AdminIssuedTicket {
   issuedTicketNo: string
   userName: string

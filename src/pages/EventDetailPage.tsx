@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Trash2, Clock, Users, Ticket, ShoppingCart, Edit2, X, MapPin } from 'lucide-react'
+import { ArrowLeft, Trash2, Clock, Users, Ticket, ShoppingCart, Edit2, X, MapPin, Download } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
   getEventDetail,
@@ -9,8 +9,13 @@ import {
   updateEventStatus,
   updateEvent,
   getEventIssuedTickets,
+  getEventTicketItems,
+  updateTicketItem,
+  adjustTicketStock,
+  exportTicketItems,
+  exportIssuedTickets,
 } from '../api/admin'
-import type { AdminEventDetail, AdminIssuedTicket, Page } from '../types'
+import type { AdminEventDetail, AdminIssuedTicket, AdminTicketItem, Page } from '../types'
 import { cn } from '../lib/utils'
 import { label, eventStatusLabel } from '../lib/labels'
 import ConfirmModal from '../components/ConfirmModal'
@@ -34,6 +39,14 @@ interface EditForm {
   content: string
   placeName: string
   placeAddress: string
+}
+
+interface TicketItemEditForm {
+  name: string
+  description: string
+  price: string
+  quantity: string
+  purchaseLimit: string
 }
 
 export default function EventDetailPage() {
@@ -61,6 +74,22 @@ export default function EventDetailPage() {
     placeAddress: '',
   })
 
+  // Ticket item edit modal state
+  const [ticketItemEditOpen, setTicketItemEditOpen] = useState(false)
+  const [editingTicketItem, setEditingTicketItem] = useState<AdminTicketItem | null>(null)
+  const [ticketItemForm, setTicketItemForm] = useState<TicketItemEditForm>({
+    name: '',
+    description: '',
+    price: '',
+    quantity: '',
+    purchaseLimit: '',
+  })
+
+  // Stock adjust modal state
+  const [stockAdjustOpen, setStockAdjustOpen] = useState(false)
+  const [adjustingTicketItem, setAdjustingTicketItem] = useState<AdminTicketItem | null>(null)
+  const [stockDelta, setStockDelta] = useState('')
+
   const { data: event, isLoading } = useQuery<AdminEventDetail>({
     queryKey: ['event', eventId],
     queryFn: () => getEventDetail(eventId),
@@ -72,6 +101,51 @@ export default function EventDetailPage() {
     queryFn: () => getEventIssuedTickets(eventId, { page: ticketPage, size: 10 }),
     enabled: !isNaN(eventId),
   })
+
+  const { data: ticketItems, isLoading: ticketItemsLoading } = useQuery<AdminTicketItem[]>({
+    queryKey: ['event-ticket-items', eventId],
+    queryFn: () => getEventTicketItems(eventId),
+    enabled: !isNaN(eventId),
+  })
+
+  const ticketItemEditMutation = useMutation({
+    mutationFn: (data: Parameters<typeof updateTicketItem>[2]) =>
+      updateTicketItem(eventId, editingTicketItem!.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event-ticket-items', eventId] })
+      toast.success('티켓 종류가 수정되었습니다.')
+      setTicketItemEditOpen(false)
+    },
+    onError: () => {
+      toast.error('티켓 종류 수정에 실패했습니다.')
+    },
+  })
+
+  const stockAdjustMutation = useMutation({
+    mutationFn: (delta: number) =>
+      adjustTicketStock(eventId, adjustingTicketItem!.id, delta),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event-ticket-items', eventId] })
+      toast.success('재고가 조정되었습니다.')
+      setStockAdjustOpen(false)
+    },
+    onError: () => {
+      toast.error('재고 조정에 실패했습니다.')
+    },
+  })
+
+  const handleOpenStockAdjust = (item: AdminTicketItem) => {
+    setAdjustingTicketItem(item)
+    setStockDelta('')
+    setStockAdjustOpen(true)
+  }
+
+  const handleStockAdjustSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const delta = Number(stockDelta)
+    if (isNaN(delta) || delta === 0) return
+    stockAdjustMutation.mutate(delta)
+  }
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteEvent(eventId),
@@ -139,6 +213,51 @@ export default function EventDetailPage() {
   const handleStatusChange = () => {
     if (!selectedStatus) return
     setStatusConfirmOpen(true)
+  }
+
+  const handleOpenTicketItemEdit = (item: AdminTicketItem) => {
+    setEditingTicketItem(item)
+    setTicketItemForm({
+      name: item.name,
+      description: item.description ?? '',
+      price: String(item.price),
+      quantity: String(item.quantity),
+      purchaseLimit: String(item.purchaseLimit),
+    })
+    setTicketItemEditOpen(true)
+  }
+
+  const handleTicketItemEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    ticketItemEditMutation.mutate({
+      name: ticketItemForm.name || undefined,
+      description: ticketItemForm.description || undefined,
+      price: ticketItemForm.price ? Number(ticketItemForm.price) : undefined,
+      quantity: ticketItemForm.quantity ? Number(ticketItemForm.quantity) : undefined,
+      purchaseLimit: ticketItemForm.purchaseLimit ? Number(ticketItemForm.purchaseLimit) : undefined,
+    })
+  }
+
+  const handleExportTicketItems = async () => {
+    const response = await exportTicketItems(eventId)
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `ticket-items-${id}.xlsx`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  }
+
+  const handleExportIssuedTickets = async () => {
+    const response = await exportIssuedTickets(eventId)
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `issued-tickets-${id}.xlsx`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
   }
 
   if (isLoading) {
@@ -321,9 +440,94 @@ export default function EventDetailPage() {
         </div>
       </div>
 
+      {/* Ticket items section */}
+      <div className="mt-6 rounded-xl bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-gray-900">티켓 종류</h3>
+          <button
+            onClick={handleExportTicketItems}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <Download className="h-4 w-4" />
+            엑셀 다운로드
+          </button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-gray-200 bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 font-medium text-gray-600">이름</th>
+                <th className="px-4 py-3 font-medium text-gray-600">가격</th>
+                <th className="px-4 py-3 font-medium text-gray-600">수량</th>
+                <th className="px-4 py-3 font-medium text-gray-600">판매수</th>
+                <th className="px-4 py-3 font-medium text-gray-600">구매제한</th>
+                <th className="px-4 py-3 font-medium text-gray-600">타입</th>
+                <th className="px-4 py-3 font-medium text-gray-600"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {ticketItemsLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    {Array.from({ length: 7 }).map((_, j) => (
+                      <td key={j} className="px-4 py-3">
+                        <div className="h-4 w-20 rounded bg-gray-200" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : !ticketItems || ticketItems.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                    티켓 종류가 없습니다.
+                  </td>
+                </tr>
+              ) : (
+                ticketItems.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium text-gray-900">{item.name}</td>
+                    <td className="px-4 py-3 text-gray-700">{item.price.toLocaleString()}원</td>
+                    <td className="px-4 py-3 text-gray-700">{item.quantity.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-gray-700">{item.supplyCount.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-gray-700">{item.purchaseLimit.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-gray-500">{item.type}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleOpenTicketItemEdit(item)}
+                          className="flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                          <Edit2 className="h-3 w-3" />
+                          수정
+                        </button>
+                        <button
+                          onClick={() => handleOpenStockAdjust(item)}
+                          className="flex items-center gap-1 rounded-lg border border-blue-300 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                        >
+                          재고 조정
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Issued tickets section */}
       <div className="mt-6 rounded-xl bg-white p-6 shadow-sm">
-        <h3 className="mb-4 text-lg font-bold text-gray-900">발급된 티켓</h3>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-gray-900">발급된 티켓</h3>
+          <button
+            onClick={handleExportIssuedTickets}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <Download className="h-4 w-4" />
+            엑셀 다운로드
+          </button>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-gray-200 bg-gray-50">
@@ -521,6 +725,154 @@ export default function EventDetailPage() {
                   className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                 >
                   저장
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Ticket item edit modal */}
+      {ticketItemEditOpen && editingTicketItem && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={() => setTicketItemEditOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ticket-item-edit-modal-title"
+        >
+          <div
+            className="mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 id="ticket-item-edit-modal-title" className="text-lg font-bold text-gray-900">티켓 종류 수정</h3>
+              <button onClick={() => setTicketItemEditOpen(false)} className="p-1 text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleTicketItemEditSubmit} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">이름</label>
+                <input
+                  type="text"
+                  value={ticketItemForm.name}
+                  onChange={(e) => setTicketItemForm({ ...ticketItemForm, name: e.target.value })}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">설명</label>
+                <textarea
+                  value={ticketItemForm.description}
+                  onChange={(e) => setTicketItemForm({ ...ticketItemForm, description: e.target.value })}
+                  rows={3}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">가격 (원)</label>
+                <input
+                  type="number"
+                  value={ticketItemForm.price}
+                  onChange={(e) => setTicketItemForm({ ...ticketItemForm, price: e.target.value })}
+                  min={0}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">수량</label>
+                <input
+                  type="number"
+                  value={ticketItemForm.quantity}
+                  onChange={(e) => setTicketItemForm({ ...ticketItemForm, quantity: e.target.value })}
+                  min={0}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">구매제한</label>
+                <input
+                  type="number"
+                  value={ticketItemForm.purchaseLimit}
+                  onChange={(e) => setTicketItemForm({ ...ticketItemForm, purchaseLimit: e.target.value })}
+                  min={0}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setTicketItemEditOpen(false)}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={ticketItemEditMutation.isPending}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  저장
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Stock adjust modal */}
+      {stockAdjustOpen && adjustingTicketItem && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={() => setStockAdjustOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="stock-adjust-modal-title"
+        >
+          <div
+            className="mx-4 w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 id="stock-adjust-modal-title" className="text-lg font-bold text-gray-900">재고 조정</h3>
+              <button onClick={() => setStockAdjustOpen(false)} className="p-1 text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="mb-1 text-sm text-gray-600">
+              <span className="font-medium">{adjustingTicketItem.name}</span>
+            </p>
+            <p className="mb-4 text-sm text-gray-500">
+              현재 재고: {adjustingTicketItem.quantity.toLocaleString()} / 공급량: {adjustingTicketItem.supplyCount.toLocaleString()}
+            </p>
+            <form onSubmit={handleStockAdjustSubmit} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  조정량 (양수 = 증가, 음수 = 감소)
+                </label>
+                <input
+                  type="number"
+                  value={stockDelta}
+                  onChange={(e) => setStockDelta(e.target.value)}
+                  placeholder="예: 10 또는 -5"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStockAdjustOpen(false)}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={stockAdjustMutation.isPending || !stockDelta || Number(stockDelta) === 0}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  적용
                 </button>
               </div>
             </form>
