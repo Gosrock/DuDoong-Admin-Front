@@ -10,12 +10,12 @@ import EventDetailPage from './pages/EventDetailPage'
 import OrdersPage from './pages/OrdersPage'
 import OrderDetailPage from './pages/OrderDetailPage'
 import CommentsPage from './pages/CommentsPage'
+import { hasAuthCookie } from './lib/utils'
 
 const queryClient = new QueryClient()
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const token = localStorage.getItem('admin_token')
-  if (!token) return <Navigate to="/login" replace />
+  if (!hasAuthCookie()) return <Navigate to="/login" replace />
   return <>{children}</>
 }
 

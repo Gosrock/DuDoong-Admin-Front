@@ -53,22 +53,29 @@ export const handlers = [
     })
   ),
 
-  // Admin login
-  http.post('*/internal-api/v1/auth/oauth/local/login', async ({ request }) => {
-    const body = (await request.json()) as { email?: string }
-    if (body.email === 'forbidden@dudoong.com') {
-      return HttpResponse.json({ status: 403, code: 'ADMIN_FORBIDDEN' }, { status: 403 })
+  // Admin me (권한 확인)
+  http.get('*/internal-api/v1/auth/me', ({ cookies }) => {
+    // 쿠키에 accessToken이 있고 유효한 경우 ADMIN 정보 반환
+    // 테스트에서는 쿠키 값으로 분기
+    if (cookies.accessToken === 'valid-admin-token') {
+      return HttpResponse.json({
+        status: 200,
+        data: {
+          id: 1,
+          name: '관리자',
+          email: 'admin@dudoong.com',
+          profileImage: null,
+          accountRole: 'ADMIN',
+          accountState: 'NORMAL',
+          phoneNumber: '010-0000-0000',
+          marketingAgree: false,
+          oauthProvider: 'KAKAO',
+          createdAt: '2026-01-01T00:00:00',
+        },
+      })
     }
-    return HttpResponse.json({
-      status: 200,
-      data: {
-        accessToken: 'mock-admin-token',
-        refreshToken: 'mock-refresh-token',
-        accessTokenAge: 3600,
-        refreshTokenAge: 7200,
-        userProfile: { name: '관리자', email: body.email },
-      },
-    })
+    // 권한 없는 유저 또는 유효하지 않은 토큰
+    return HttpResponse.json({ status: 403, code: 'ADMIN_FORBIDDEN' }, { status: 403 })
   }),
 
   // Events list

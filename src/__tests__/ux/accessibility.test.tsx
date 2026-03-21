@@ -8,7 +8,10 @@ import LoginPage from '../../pages/LoginPage'
 import EventsPage from '../../pages/EventsPage'
 
 beforeAll(() => server.listen())
-afterEach(() => server.resetHandlers())
+afterEach(() => {
+  server.resetHandlers()
+  document.cookie = 'accessToken=; max-age=0'
+})
 afterAll(() => server.close())
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -28,18 +31,17 @@ describe('접근성', () => {
     expect(screen.getByLabelText('메뉴 열기')).toBeInTheDocument()
   })
 
-  it('LoginPage 이메일 input에 label이 연결되어 있다', () => {
+  it('LoginPage 쿠키 없을 때 메인 사이트 링크가 있다', () => {
     renderWithProviders(<LoginPage />)
-    const emailInput = screen.getByLabelText('이메일')
-    expect(emailInput).toBeInTheDocument()
-    expect(emailInput.tagName).toBe('INPUT')
+    const link = screen.getByText('메인 사이트로 이동')
+    expect(link).toBeInTheDocument()
+    expect(link.tagName).toBe('A')
   })
 
-  it('LoginPage 이름 input에 label이 연결되어 있다', () => {
+  it('LoginPage 쿠키 있고 권한 없을 때 안내 메시지가 있다', () => {
+    document.cookie = 'accessToken=some-token'
     renderWithProviders(<LoginPage />)
-    const nameInput = screen.getByLabelText('이름')
-    expect(nameInput).toBeInTheDocument()
-    expect(nameInput.tagName).toBe('INPUT')
+    expect(screen.getByText('관리자 권한이 없는 계정입니다.')).toBeInTheDocument()
   })
 
   it('EventsPage 테이블 헤더에 scope="col"이 있다', async () => {
