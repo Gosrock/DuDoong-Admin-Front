@@ -182,6 +182,21 @@ export default function HostDetailPage() {
               {new Date(host.createdAt).toLocaleString('ko-KR')}
             </dd>
           </div>
+          {host.slackUrl && (
+            <div className="rounded-lg bg-gray-50 p-4">
+              <dt className="text-sm text-gray-500">Slack URL</dt>
+              <dd className="mt-1 font-medium text-gray-900">
+                <a
+                  href={host.slackUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline break-all"
+                >
+                  {host.slackUrl}
+                </a>
+              </dd>
+            </div>
+          )}
         </dl>
 
         <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-gray-200 pt-6">

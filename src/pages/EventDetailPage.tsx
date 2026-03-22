@@ -292,8 +292,24 @@ export default function EventDetailPage() {
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-xl font-bold text-gray-900">{event.name}</h2>
-            <p className="mt-1 text-sm text-gray-500">주최: {event.hostName}</p>
+            <p className="mt-1 text-sm text-gray-500">
+              주최:{' '}
+              {event.hostId ? (
+                <Link to={`/hosts/${event.hostId}`} className="text-blue-600 hover:underline">
+                  {event.hostName}
+                </Link>
+              ) : (
+                event.hostName
+              )}
+            </p>
           </div>
+          {event.posterImageKey && (
+            <img
+              src={`https://asset.dudoong.com/${event.posterImageKey}`}
+              alt="포스터"
+              className="mt-2 h-24 w-auto rounded-lg object-cover"
+            />
+          )}
           <div className="flex items-center gap-2 self-start">
             <span
               className={cn(
@@ -380,6 +396,17 @@ export default function EventDetailPage() {
             <div className="rounded-lg bg-gray-50 p-4 sm:col-span-2 lg:col-span-3">
               <dt className="text-sm text-gray-500">설명</dt>
               <dd className="mt-1 whitespace-pre-wrap text-sm text-gray-900">{event.content}</dd>
+            </div>
+          )}
+          {event.latitude !== undefined && event.longitude !== undefined && (
+            <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-4">
+              <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-gray-400" />
+              <div>
+                <dt className="text-sm text-gray-500">좌표</dt>
+                <dd className="mt-1 font-mono text-sm text-gray-900">
+                  {event.latitude}, {event.longitude}
+                </dd>
+              </div>
             </div>
           )}
         </dl>

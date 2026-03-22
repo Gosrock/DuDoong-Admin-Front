@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { Search, Trash2 } from 'lucide-react'
 import { getComments, deleteComment } from '../api/admin'
 import type { AdminComment, Page } from '../types'
@@ -172,8 +172,24 @@ export default function CommentsPage() {
                 sortedData.map((comment) => (
                   <tr key={comment.id} className="transition-colors hover:bg-gray-50">
                     <td className="px-4 py-3 text-gray-900">{comment.id}</td>
-                    <td className="px-4 py-3 text-gray-900">{comment.userName}</td>
-                    <td className="px-4 py-3 text-gray-600">{comment.eventName}</td>
+                    <td className="px-4 py-3 text-gray-900">
+                      {comment.userId !== undefined ? (
+                        <Link to={`/users/${comment.userId}`} className="text-blue-600 hover:underline">
+                          {comment.userName}
+                        </Link>
+                      ) : (
+                        comment.userName
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {comment.eventId !== undefined ? (
+                        <Link to={`/events/${comment.eventId}`} className="text-blue-600 hover:underline">
+                          {comment.eventName}
+                        </Link>
+                      ) : (
+                        comment.eventName
+                      )}
+                    </td>
                     <td className="max-w-xs truncate px-4 py-3 text-gray-600" title={comment.content}>
                       {comment.content.length > 50
                         ? comment.content.slice(0, 50) + '...'

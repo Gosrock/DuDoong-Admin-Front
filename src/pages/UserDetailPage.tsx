@@ -138,6 +138,22 @@ export default function UserDetailPage() {
               {new Date(user.createdAt).toLocaleString('ko-KR')}
             </dd>
           </div>
+          {user.lastLoginAt && (
+            <div className="rounded-lg bg-gray-50 p-4">
+              <dt className="text-sm text-gray-500">마지막 로그인</dt>
+              <dd className="mt-1 font-medium text-gray-900">
+                {new Date(user.lastLoginAt).toLocaleString('ko-KR')}
+              </dd>
+            </div>
+          )}
+          {user.receiveMail !== undefined && (
+            <div className="rounded-lg bg-gray-50 p-4">
+              <dt className="text-sm text-gray-500">메일 수신 동의</dt>
+              <dd className="mt-1 font-medium text-gray-900">
+                {user.receiveMail ? '동의' : '거부'}
+              </dd>
+            </div>
+          )}
         </dl>
 
         <div className="mt-6 flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:flex-wrap sm:items-center">
