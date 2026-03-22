@@ -95,7 +95,6 @@ export interface AdminOrder {
   discountAmount?: string
   couponName?: string
   failReason?: string
-  userRefundReason?: string
   cancelReason?: string
   refundStatus?: string
   refundStatusChangedAt?: string
