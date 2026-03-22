@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
-import { getUserDetail, updateUserRole, updateUserStatus } from '../api/admin'
+import { getUserDetail, updateUserRole, updateUserStatus, updateUserName } from '../api/admin'
 import type { AdminUserDetail } from '../types'
 import { cn } from '../lib/utils'
 import { label, roleLabel, accountStateLabel } from '../lib/labels'
@@ -37,6 +37,8 @@ export default function UserDetailPage() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingRole, setPendingRole] = useState<string | null>(null)
   const [statusConfirmOpen, setStatusConfirmOpen] = useState(false)
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [newName, setNewName] = useState('')
 
   const { data: user, isLoading } = useQuery<AdminUserDetail>({
     queryKey: ['user', userId],
@@ -67,6 +69,27 @@ export default function UserDetailPage() {
       toast.error('계정 상태 변경에 실패했습니다.')
     },
   })
+
+  const nameMutation = useMutation({
+    mutationFn: (name: string) => updateUserName(userId, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', userId] })
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      toast.success('이름이 변경되었습니다.')
+      setIsEditingName(false)
+    },
+    onError: () => {
+      toast.error('이름 변경에 실패했습니다.')
+    },
+  })
+
+  const handleChangeName = () => {
+    if (newName.length < 2 || newName.length > 7) {
+      toast.error('이름은 2~7자여야 합니다.')
+      return
+    }
+    nameMutation.mutate(newName)
+  }
 
   if (isLoading) {
     return (
@@ -100,7 +123,45 @@ export default function UserDetailPage() {
       <div className="rounded-xl bg-white p-6 shadow-sm">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">{user.name}</h2>
+            <div className="flex items-center gap-2">
+              {isEditingName ? (
+                <>
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    maxLength={7}
+                    className="rounded-lg border border-gray-300 px-2 py-1 text-xl font-bold text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={handleChangeName}
+                    disabled={nameMutation.isPending}
+                    className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    저장
+                  </button>
+                  <button
+                    onClick={() => setIsEditingName(false)}
+                    className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    취소
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-xl font-bold text-gray-900">{user.name}</h2>
+                  <button
+                    onClick={() => {
+                      setNewName(user.name)
+                      setIsEditingName(true)
+                    }}
+                    className="rounded-lg border border-gray-300 px-2 py-0.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                  >
+                    수정
+                  </button>
+                </>
+              )}
+            </div>
             <p className="text-sm text-gray-500">{user.email}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

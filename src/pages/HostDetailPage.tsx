@@ -10,6 +10,7 @@ import {
   removeHostMember,
   updateHostPartner,
   updateHostProfile,
+  transferHostMaster,
 } from '../api/admin'
 import type { AdminHost, AdminHostMember } from '../types'
 import { cn } from '../lib/utils'
@@ -37,6 +38,7 @@ export default function HostDetailPage() {
   const [addRole, setAddRole] = useState('GUEST')
   const [pendingRoleChange, setPendingRoleChange] = useState<{ userId: number; role: string } | null>(null)
   const [roleConfirmOpen, setRoleConfirmOpen] = useState(false)
+  const [transferConfirmUserId, setTransferConfirmUserId] = useState<number | null>(null)
   const [profileEditOpen, setProfileEditOpen] = useState(false)
   const [profileName, setProfileName] = useState('')
   const [profileIntroduce, setProfileIntroduce] = useState('')
@@ -116,6 +118,18 @@ export default function HostDetailPage() {
     },
     onError: () => {
       toast.error('프로필 수정에 실패했습니다.')
+    },
+  })
+
+  const transferMasterMutation = useMutation({
+    mutationFn: (newMasterUserId: number) => transferHostMaster(hostId, newMasterUserId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['host', hostId] })
+      queryClient.invalidateQueries({ queryKey: ['host-members', hostId] })
+      toast.success('마스터가 변경되었습니다.')
+    },
+    onError: () => {
+      toast.error('마스터 변경에 실패했습니다.')
     },
   })
 
@@ -305,13 +319,24 @@ export default function HostDetailPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => setRemoveConfirmUserId(member.userId)}
-                        disabled={removeMemberMutation.isPending}
-                        className="rounded-lg px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
-                      >
-                        제거
-                      </button>
+                      <div className="flex items-center gap-1">
+                        {member.role !== 'MASTER' && (
+                          <button
+                            onClick={() => setTransferConfirmUserId(member.userId)}
+                            disabled={transferMasterMutation.isPending}
+                            className="rounded-lg px-3 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+                          >
+                            마스터로 지정
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setRemoveConfirmUserId(member.userId)}
+                          disabled={removeMemberMutation.isPending}
+                          className="rounded-lg px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                        >
+                          제거
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -364,6 +389,20 @@ export default function HostDetailPage() {
           setRemoveConfirmUserId(null)
         }}
         onCancel={() => setRemoveConfirmUserId(null)}
+      />
+
+      {/* 마스터 양도 확인 모달 */}
+      <ConfirmModal
+        open={transferConfirmUserId !== null}
+        title="마스터 양도"
+        description="이 유저를 호스트 마스터로 지정하시겠습니까? 기존 마스터는 매니저로 변경됩니다."
+        confirmLabel="양도"
+        variant="danger"
+        onConfirm={() => {
+          if (transferConfirmUserId !== null) transferMasterMutation.mutate(transferConfirmUserId)
+          setTransferConfirmUserId(null)
+        }}
+        onCancel={() => setTransferConfirmUserId(null)}
       />
 
       {/* 멤버 추가 모달 */}

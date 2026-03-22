@@ -94,6 +94,11 @@ export interface AdminOrder {
   supplyAmount?: string
   discountAmount?: string
   couponName?: string
+  failReason?: string
+  userRefundReason?: string
+  cancelReason?: string
+  refundStatus?: string
+  refundStatusChangedAt?: string
 }
 
 export interface AdminComment {
