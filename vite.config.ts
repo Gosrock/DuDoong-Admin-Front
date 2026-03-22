@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig(({ mode }) => ({
+  base: '/internal-admin/',
   plugins: [react()],
   server: {
     proxy: mode === 'local' ? {
