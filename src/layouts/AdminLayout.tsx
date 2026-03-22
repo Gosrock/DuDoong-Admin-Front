@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   X,
+  RotateCcw,
 } from 'lucide-react'
 import { cn, getMainSiteUrl } from '../lib/utils'
 
@@ -19,6 +20,7 @@ const navItems = [
   { to: '/hosts', icon: Building2, label: '호스트 관리' },
   { to: '/events', icon: Calendar, label: '이벤트 관리' },
   { to: '/orders', icon: ShoppingCart, label: '주문 관리' },
+  { to: '/refunds', icon: RotateCcw, label: '환불 관리' },
   { to: '/comments', icon: MessageSquare, label: '댓글 관리' },
 ]
 
