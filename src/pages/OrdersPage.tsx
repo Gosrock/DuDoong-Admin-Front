@@ -2,11 +2,10 @@ import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Search, XCircle, Download } from 'lucide-react'
-import { getOrders, cancelOrder, exportOrders } from '../api/admin'
+import { getOrders, cancelOrderWithReason, exportOrders } from '../api/admin'
 import type { AdminOrder, Page } from '../types'
 import { cn } from '../lib/utils'
 import { label, orderStatusLabel } from '../lib/labels'
-import ConfirmModal from '../components/ConfirmModal'
 import ToastContainer from '../components/ToastContainer'
 import { useToast } from '../hooks/useToast'
 
@@ -31,8 +30,9 @@ export default function OrdersPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('ALL')
 
-  const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingCancelId, setPendingCancelId] = useState<string | null>(null)
+  const [cancelReasonOpen, setCancelReasonOpen] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
 
   const [eventIdInput, setEventIdInput] = useState(eventId ? String(eventId) : '')
   const [sortField, setSortField] = useState<string>('')
@@ -51,7 +51,8 @@ export default function OrdersPage() {
   })
 
   const cancelMutation = useMutation({
-    mutationFn: cancelOrder,
+    mutationFn: ({ orderId, reason }: { orderId: string; reason?: string }) =>
+      cancelOrderWithReason(orderId, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       toast.success('주문이 취소되었습니다.')
@@ -70,7 +71,7 @@ export default function OrdersPage() {
   const handleCancel = (e: React.MouseEvent, orderId: string) => {
     e.stopPropagation()
     setPendingCancelId(orderId)
-    setConfirmOpen(true)
+    setCancelReasonOpen(true)
   }
 
   const handleExport = async () => {
@@ -349,22 +350,56 @@ export default function OrdersPage() {
         )}
       </div>
 
-      <ConfirmModal
-        open={confirmOpen}
-        title="주문 취소"
-        description="이 주문을 취소하시겠습니까?"
-        confirmLabel="주문 취소"
-        variant="danger"
-        onConfirm={() => {
-          if (pendingCancelId) cancelMutation.mutate(pendingCancelId)
-          setConfirmOpen(false)
-          setPendingCancelId(null)
-        }}
-        onCancel={() => {
-          setConfirmOpen(false)
-          setPendingCancelId(null)
-        }}
-      />
+      {/* 취소 사유 입력 모달 */}
+      {cancelReasonOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => {
+            setCancelReasonOpen(false)
+            setPendingCancelId(null)
+            setCancelReason('')
+          }}
+        >
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-4 text-base font-semibold text-gray-900">주문 취소</h3>
+            <p className="mb-3 text-sm text-gray-600">이 주문을 취소하시겠습니까?</p>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">취소 사유 (선택)</label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="취소 사유를 입력하세요"
+                rows={3}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setCancelReasonOpen(false)
+                  setPendingCancelId(null)
+                  setCancelReason('')
+                }}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => {
+                  if (pendingCancelId) cancelMutation.mutate({ orderId: pendingCancelId, reason: cancelReason || undefined })
+                  setCancelReasonOpen(false)
+                  setPendingCancelId(null)
+                  setCancelReason('')
+                }}
+                disabled={cancelMutation.isPending}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                주문 취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ToastContainer toasts={toast.toasts} />
     </div>

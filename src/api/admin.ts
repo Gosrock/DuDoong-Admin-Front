@@ -39,6 +39,10 @@ export const updateTicketItem = (eventId: number, ticketItemId: number, data: {
 export const adjustTicketStock = (eventId: number, ticketItemId: number, delta: number) =>
   client.post(`/internal-api/v1/events/${eventId}/ticket-items/${ticketItemId}/adjust-stock`, { delta }).then(r => r.data.data)
 
+// Users - name
+export const updateUserName = (userId: number, name: string) =>
+  client.patch(`/internal-api/v1/users/${userId}/name`, { name }).then(r => r.data.data)
+
 // Orders
 export const getOrders = (params: { page?: number; size?: number; keyword?: string; status?: string; eventId?: number }) =>
   client.get('/internal-api/v1/orders', { params }).then(r => r.data.data)
@@ -46,6 +50,10 @@ export const getOrderDetail = (orderUuid: string) =>
   client.get(`/internal-api/v1/orders/${orderUuid}`).then(r => r.data.data)
 export const cancelOrder = (orderUuid: string) =>
   client.post(`/internal-api/v1/orders/${orderUuid}/cancel`).then(r => r.data.data)
+export const cancelOrderWithReason = (orderUuid: string, reason?: string) =>
+  client.post(`/internal-api/v1/orders/${orderUuid}/cancel`, { reason }).then(r => r.data.data)
+export const updateOrderRefundStatus = (orderUuid: string, refundStatus: string, reason?: string) =>
+  client.patch(`/internal-api/v1/orders/${orderUuid}/refund-status`, { refundStatus, reason }).then(r => r.data.data)
 
 // Comments
 export const getComments = (params: { page?: number; size?: number; keyword?: string; eventId?: number }) =>
@@ -74,6 +82,8 @@ export const updateHostProfile = (hostId: number, data: {
   client.patch(`/internal-api/v1/hosts/${hostId}/profile`, data).then(r => r.data.data)
 export const getHostEvents = (hostId: number, params: { page?: number; size?: number }) =>
   client.get(`/internal-api/v1/hosts/${hostId}/events`, { params }).then(r => r.data.data)
+export const transferHostMaster = (hostId: number, newMasterUserId: number) =>
+  client.post(`/internal-api/v1/hosts/${hostId}/transfer-master`, { newMasterUserId }).then(r => r.data.data)
 
 // Exports
 export const exportOrders = (params: { keyword?: string; status?: string; eventId?: number }) =>
