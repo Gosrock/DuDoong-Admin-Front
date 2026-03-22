@@ -21,7 +21,6 @@ const refundStatusBadge: Record<string, string> = {
   NONE: 'bg-gray-100 text-gray-700',
   REFUND_REQUESTED: 'bg-yellow-100 text-yellow-700',
   REFUND_COMPLETED: 'bg-green-100 text-green-700',
-  REFUND_REJECTED: 'bg-red-100 text-red-700',
 }
 
 export default function OrderDetailPage() {
@@ -67,13 +66,6 @@ export default function OrderDetailPage() {
   const handleRefundComplete = () => {
     if (!confirm('환불을 완료 처리하시겠습니까?\n\n⚠️ 이 작업은 되돌릴 수 없습니다.')) return
     refundStatusMutation.mutate({ refundStatus: 'REFUND_COMPLETED' })
-  }
-
-  const handleRefundReject = () => {
-    if (!confirm('환불을 거절하시겠습니까?\n\n⚠️ 이 작업은 되돌릴 수 없습니다.')) return
-    const reason = prompt('환불 거절 사유를 입력하세요:')
-    if (reason === null) return
-    refundStatusMutation.mutate({ refundStatus: 'REFUND_REJECTED', reason })
   }
 
   const canCancel = (s: string) => s === 'CONFIRM' || s === 'PENDING_APPROVE'
@@ -283,12 +275,6 @@ export default function OrderDetailPage() {
               </span>
             </div>
             <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {order.userRefundReason && (
-                <div className="rounded-lg bg-gray-50 p-3">
-                  <dt className="text-xs text-gray-500">유저 환불 사유</dt>
-                  <dd className="mt-0.5 text-sm font-medium text-gray-900">{order.userRefundReason}</dd>
-                </div>
-              )}
               {order.cancelReason && (
                 <div className="rounded-lg bg-gray-50 p-3">
                   <dt className="text-xs text-gray-500">취소 사유</dt>
@@ -319,13 +305,6 @@ export default function OrderDetailPage() {
                 >
                   환불 완료
                 </button>
-                <button
-                  onClick={handleRefundReject}
-                  disabled={refundStatusMutation.isPending}
-                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
-                >
-                  환불 거절
-                </button>
               </div>
             )}
           </div>
@@ -333,16 +312,10 @@ export default function OrderDetailPage() {
 
         {/* 사유 필드 (환불 상태가 없을 때도 표시) */}
         {!order.refundStatus || order.refundStatus === 'NONE' ? (
-          (order.failReason || order.userRefundReason || order.cancelReason) && (
+          (order.failReason || order.cancelReason) && (
             <div className="mt-4 rounded-xl border border-gray-200 p-4">
               <h3 className="mb-3 text-sm font-semibold text-gray-700">사유 정보</h3>
               <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {order.userRefundReason && (
-                  <div className="rounded-lg bg-gray-50 p-3">
-                    <dt className="text-xs text-gray-500">유저 환불 사유</dt>
-                    <dd className="mt-0.5 text-sm font-medium text-gray-900">{order.userRefundReason}</dd>
-                  </div>
-                )}
                 {order.cancelReason && (
                   <div className="rounded-lg bg-gray-50 p-3">
                     <dt className="text-xs text-gray-500">취소 사유</dt>

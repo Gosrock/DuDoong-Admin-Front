@@ -55,6 +55,14 @@ export const cancelOrderWithReason = (orderUuid: string, reason?: string) =>
 export const updateOrderRefundStatus = (orderUuid: string, refundStatus: string, reason?: string) =>
   client.patch(`/internal-api/v1/orders/${orderUuid}/refund-status`, { refundStatus, reason }).then(r => r.data.data)
 
+// Refunds
+export const getRefunds = (params: { page?: number; size?: number; refundStatus?: string; eventId?: number }) =>
+  client.get('/internal-api/v1/refunds', { params }).then(r => r.data.data)
+export const getRefundDetail = (orderUuid: string) =>
+  client.get(`/internal-api/v1/refunds/${orderUuid}`).then(r => r.data.data)
+export const completeRefund = (orderUuid: string) =>
+  client.patch(`/internal-api/v1/refunds/${orderUuid}/complete`).then(r => r.data.data)
+
 // Comments
 export const getComments = (params: { page?: number; size?: number; keyword?: string; eventId?: number }) =>
   client.get('/internal-api/v1/comments', { params }).then(r => r.data.data)

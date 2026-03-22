@@ -95,10 +95,25 @@ export interface AdminOrder {
   discountAmount?: string
   couponName?: string
   failReason?: string
-  userRefundReason?: string
   cancelReason?: string
   refundStatus?: string
   refundStatusChangedAt?: string
+}
+
+export interface AdminRefund {
+  orderId: string
+  orderNo?: string
+  userName?: string
+  eventName?: string
+  eventId?: number
+  userId?: number
+  ticketName?: string
+  totalAmount?: string
+  cancelReason?: string
+  refundStatus: string
+  refundStatusChangedAt?: string
+  withDrawAt?: string
+  createdAt?: string
 }
 
 export interface AdminComment {
