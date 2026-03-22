@@ -26,6 +26,8 @@ export interface AdminUserDetail extends AdminUser {
   phoneNumber: string | null
   marketingAgree: boolean
   oauthProvider: string | null
+  lastLoginAt?: string
+  receiveMail?: boolean
 }
 
 export interface AdminEvent {
@@ -36,6 +38,10 @@ export interface AdminEvent {
   startAt: string
   runTime: number
   createdAt: string
+  hostId?: number
+  posterImageKey?: string
+  latitude?: number
+  longitude?: number
 }
 
 export interface AdminEventDetail extends AdminEvent {
@@ -77,6 +83,17 @@ export interface AdminOrder {
   totalAmount: number
   orderStatus: string
   createdAt: string
+  orderNo?: string
+  orderMethod?: string
+  userId?: number
+  eventId?: number
+  approvedAt?: string
+  withDrawAt?: string
+  paymentMethod?: string
+  receiptUrl?: string
+  supplyAmount?: string
+  discountAmount?: string
+  couponName?: string
 }
 
 export interface AdminComment {
@@ -86,6 +103,8 @@ export interface AdminComment {
   content: string
   commentStatus: string
   createdAt: string
+  userId?: number
+  eventId?: number
 }
 
 export interface AdminHost {
@@ -98,6 +117,7 @@ export interface AdminHost {
   partner: boolean
   masterUserId: number
   createdAt: string
+  slackUrl?: string
 }
 
 export interface AdminHostMember {

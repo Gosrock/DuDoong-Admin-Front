@@ -3,7 +3,7 @@
  *
  * 실행 전 필수:
  *   1. cd DuDoong-Backend && docker compose up -d
- *   2. SPRING_PROFILES_ACTIVE=infrastructure,domain,domain-local,common ./gradlew :DuDoong-Api:bootRun
+ *   2. ./gradlew :DuDoong-Api:bootRun --args='--spring.profiles.active=local,infrastructure,domain,domain-local,common,common-local'
  *   3. cd DuDoong-Admin-Front && npm run test:e2e
  *
  * 환경변수:
@@ -23,9 +23,9 @@ let adminToken = ''
 
 async function request(method: string, url: string, body?: unknown, headers?: Record<string, string>) {
   const h: Record<string, string> = { 'Content-Type': 'application/json', ...headers }
-  const skipAuth = headers && 'X-Admin-Token' in headers
-  if (adminToken && !skipAuth && !headers?.Authorization) {
-    h['X-Admin-Token'] = adminToken
+  // 기본적으로 Authorization Bearer 헤더로 토큰 전달
+  if (adminToken && !headers?.Authorization) {
+    h['Authorization'] = `Bearer ${adminToken}`
   }
   const res = await fetch(url, {
     method,
@@ -60,26 +60,26 @@ async function exec(cmd: string): Promise<string> {
 async function setupAdminUser(): Promise<boolean> {
   console.log('\n🔧 테스트 Admin 유저 셋업')
 
-  // 1. Admin login으로 유저 생성 (403이지만 DB에 저장됨)
-  await request('POST', `${ADMIN_API}/auth/oauth/local/login`, {
+  // 1. 일반 로그인으로 유저 생성
+  await request('POST', `${PUBLIC_API}/auth/oauth/local/login`, {
     email: 'e2e-admin@dudoong.com',
     name: 'E2E관리자',
     phoneNumber: '010-9999-9999',
     profileImage: null,
     marketingAgree: false,
-  })
+  }, { Authorization: '' })  // 기존 토큰 무시
 
-  // 2. MySQL에서 role을 MANAGER로 업그레이드
-  await exec(`${MYSQL_SETUP} "UPDATE tbl_user SET account_role='MANAGER' WHERE email='e2e-admin@dudoong.com' AND account_role='USER'"`)
+  // 2. MySQL에서 role을 ADMIN으로 업그레이드
+  await exec(`${MYSQL_SETUP} "UPDATE tbl_user SET account_role='ADMIN' WHERE email='e2e-admin@dudoong.com'"`)
 
-  // 3. 다시 로그인 → admin 토큰 획득
-  const { status, data } = await request('POST', `${ADMIN_API}/auth/oauth/local/login`, {
+  // 3. 다시 로그인 → 토큰 획득 (JwtTokenFilter가 DB에서 role 실시간 조회)
+  const { status, data } = await request('POST', `${PUBLIC_API}/auth/oauth/local/login`, {
     email: 'e2e-admin@dudoong.com',
     name: 'E2E관리자',
     phoneNumber: '010-9999-9999',
     profileImage: null,
     marketingAgree: false,
-  })
+  }, { Authorization: '' })
 
   if (status === 200 && data?.accessToken) {
     adminToken = data.accessToken
@@ -99,14 +99,20 @@ async function testAuthFlow() {
   const { status: meStatus, data: meData } = await request('GET', `${ADMIN_API}/auth/me`)
   assert('/me 정상 응답', meStatus === 200, `status=${meStatus}`)
   assert('/me에 이메일 포함', meData?.email === 'e2e-admin@dudoong.com', `email=${meData?.email}`)
-  assert('/me에 역할 포함', meData?.accountRole === 'MANAGER', `role=${meData?.accountRole}`)
+  assert('/me에 역할 포함', meData?.accountRole === 'ADMIN', `role=${meData?.accountRole}`)
 
-  // USER 역할 → admin 로그인 차단
-  const { status: blockedStatus } = await request('POST', `${ADMIN_API}/auth/oauth/local/login`, {
+  // USER 역할 → admin API 차단
+  // 일반 로그인으로 USER 유저 생성
+  const { data: blockedData } = await request('POST', `${PUBLIC_API}/auth/oauth/local/login`, {
     email: 'e2e-blocked@dudoong.com', name: 'E2E차단유저',
     phoneNumber: '010-0000-0001', profileImage: null, marketingAgree: false,
-  })
-  assert('USER 역할 admin 로그인 → 403', blockedStatus === 403, `status=${blockedStatus}`)
+  }, { Authorization: '' })
+  if (blockedData?.accessToken) {
+    const { status: blockedStatus } = await request('GET', `${ADMIN_API}/dashboard`, undefined, {
+      Authorization: `Bearer ${blockedData.accessToken}`,
+    })
+    assert('USER 역할 admin API → 403', blockedStatus === 403, `status=${blockedStatus}`)
+  }
 }
 
 // ─── Test: Dashboard ─────────────────────────────────────
@@ -152,7 +158,7 @@ async function testUsers() {
   assert('키워드 검색 정상', searchStatus === 200, `status=${searchStatus}`)
   assert('검색 결과에 E2E관리자 포함', searchData?.content?.some((u: any) => u.name === 'E2E관리자'), `found=${searchData?.content?.length}`)
 
-  // 상세 조회
+  // 상세 조회 + 새 필드 검증
   if (listData?.content?.length > 0) {
     const userId = listData.content[0].id
     const { status: detailStatus, data: detailData } = await request('GET', `${ADMIN_API}/users/${userId}`)
@@ -160,6 +166,9 @@ async function testUsers() {
     assert('상세에 phoneNumber 포함', 'phoneNumber' in (detailData ?? {}), `keys=${Object.keys(detailData ?? {})}`)
     assert('상세에 oauthProvider 포함', 'oauthProvider' in (detailData ?? {}))
     assert('상세에 marketingAgree 포함', 'marketingAgree' in (detailData ?? {}))
+    // 새 필드
+    assert('상세에 lastLoginAt 포함', 'lastLoginAt' in (detailData ?? {}))
+    assert('상세에 receiveMail 포함', 'receiveMail' in (detailData ?? {}))
   }
 }
 
@@ -180,10 +189,16 @@ async function testEvents() {
     assert('이벤트에 hostName 필드', typeof event.hostName === 'string')
     assert('이벤트에 status 필드', typeof event.status === 'string')
     assert('이벤트에 startAt 필드', typeof event.startAt === 'string')
+    // 새 필드
+    assert('이벤트에 hostId 필드', 'hostId' in event)
 
     // 상세 조회
-    const { status: detailStatus } = await request('GET', `${ADMIN_API}/events/${event.id}`)
+    const { status: detailStatus, data: detailData } = await request('GET', `${ADMIN_API}/events/${event.id}`)
     assert('이벤트 상세 정상', detailStatus === 200, `status=${detailStatus}`)
+    if (detailData) {
+      assert('상세에 hostId 포함', 'hostId' in detailData)
+      assert('상세에 posterImageKey 포함', 'posterImageKey' in detailData)
+    }
   } else {
     console.log('  ⚠️ 이벤트 데이터 없음 — 상세/삭제 테스트 스킵')
   }
@@ -206,10 +221,20 @@ async function testOrders() {
     assert('주문에 eventName 필드', typeof order.eventName === 'string')
     assert('주문에 totalAmount 필드', typeof order.totalAmount === 'string' || typeof order.totalAmount === 'number')
     assert('주문에 orderStatus 필드', typeof order.orderStatus === 'string')
+    // 새 필드
+    assert('주문에 userId 필드', 'userId' in order)
+    assert('주문에 eventId 필드', 'eventId' in order)
+    assert('주문에 orderNo 필드', 'orderNo' in order)
+    assert('주문에 orderMethod 필드', 'orderMethod' in order)
 
     // 상세 조회
-    const { status: detailStatus } = await request('GET', `${ADMIN_API}/orders/${order.orderId}`)
+    const { status: detailStatus, data: detailData } = await request('GET', `${ADMIN_API}/orders/${order.orderId}`)
     assert('주문 상세 정상', detailStatus === 200, `status=${detailStatus}`)
+    if (detailData) {
+      assert('상세에 paymentMethod 포함', 'paymentMethod' in detailData)
+      assert('상세에 supplyAmount 포함', 'supplyAmount' in detailData)
+      assert('상세에 discountAmount 포함', 'discountAmount' in detailData)
+    }
   } else {
     console.log('  ⚠️ 주문 데이터 없음 — 상세 테스트 스킵')
   }
@@ -231,6 +256,9 @@ async function testComments() {
     assert('댓글에 userName 필드', typeof comment.userName === 'string')
     assert('댓글에 content 필드', typeof comment.content === 'string')
     assert('댓글에 commentStatus 필드', typeof comment.commentStatus === 'string')
+    // 새 필드
+    assert('댓글에 userId 필드', 'userId' in comment)
+    assert('댓글에 eventId 필드', 'eventId' in comment)
   } else {
     console.log('  ⚠️ 댓글 데이터 없음 — 필드 테스트 스킵')
   }
@@ -241,25 +269,19 @@ async function testComments() {
 async function testAccessControl() {
   console.log('\n📋 접근 제어')
 
-  // 미인증 차단
+  // 미인증 차단 — 토큰 없이 직접 fetch
   const endpoints = ['/dashboard', '/users', '/events', '/orders', '/comments']
   for (const ep of endpoints) {
-    const { status } = await request('GET', `${ADMIN_API}${ep}`, undefined, { 'X-Admin-Token': '' })
-    assert(`미인증 ${ep} → 차단`, status === 401 || status === 403, `status=${status}`)
+    const res = await fetch(`${ADMIN_API}${ep}`)
+    const json = await res.json().catch(() => null)
+    assert(`미인증 ${ep} → 차단`, res.status === 401 || res.status === 403, `status=${res.status}`)
   }
 
   // 가짜 토큰 차단
   const { status: fakeStatus } = await request('GET', `${ADMIN_API}/dashboard`, undefined, {
-    'X-Admin-Token': 'fake-invalid-token',
+    Authorization: 'Bearer fake-invalid-token',
   })
   assert('가짜 토큰 → 차단', fakeStatus === 401 || fakeStatus === 403, `status=${fakeStatus}`)
-
-  // Authorization 헤더(일반 토큰 방식)로 admin API 차단
-  const { status: bearerStatus } = await request('GET', `${ADMIN_API}/dashboard`, undefined, {
-    Authorization: `Bearer ${adminToken}`,
-    'X-Admin-Token': '',
-  })
-  assert('Bearer 헤더 → admin API 차단', bearerStatus === 401 || bearerStatus === 403, `status=${bearerStatus}`)
 }
 
 // ─── Test: Role Change + Immediate Effect ────────────────
@@ -267,37 +289,30 @@ async function testAccessControl() {
 async function testRoleChangeEffect() {
   console.log('\n📋 역할 변경 즉시 반영')
 
-  // 테스트용 유저 생성
-  await request('POST', `${ADMIN_API}/auth/oauth/local/login`, {
+  // 테스트용 유저 생성 (일반 로그인)
+  await request('POST', `${PUBLIC_API}/auth/oauth/local/login`, {
     email: 'e2e-roletest@dudoong.com', name: 'E2E역할테스트',
     phoneNumber: '010-8888-7777', profileImage: null, marketingAgree: false,
-  })
+  }, { Authorization: '' })
 
   // MySQL에서 SUPER_ADMIN으로 현재 admin 유저 승격 (role 변경 API 테스트용)
   await exec(`${MYSQL_SETUP} "UPDATE tbl_user SET account_role='SUPER_ADMIN' WHERE email='e2e-admin@dudoong.com'"`)
-
-  // 토큰 재발급 (새 role 반영)
-  const { data: loginData } = await request('POST', `${ADMIN_API}/auth/oauth/local/login`, {
-    email: 'e2e-admin@dudoong.com', name: 'E2E관리자',
-    phoneNumber: '010-9999-9999', profileImage: null, marketingAgree: false,
-  })
-  adminToken = loginData?.accessToken ?? adminToken
 
   // roletest 유저 찾기
   const { data: searchData } = await request('GET', `${ADMIN_API}/users?keyword=e2e-roletest`)
   const targetUser = searchData?.content?.find((u: any) => u.email === 'e2e-roletest@dudoong.com')
 
   if (targetUser) {
-    // MANAGER로 역할 변경
+    // ADMIN으로 역할 변경
     const { status: roleStatus, data: roleData } = await request(
-      'PATCH', `${ADMIN_API}/users/${targetUser.id}/role`, { role: 'MANAGER' }
+      'PATCH', `${ADMIN_API}/users/${targetUser.id}/role`, { role: 'ADMIN' }
     )
     assert('역할 변경 API 성공', roleStatus === 200, `status=${roleStatus}`)
-    assert('변경 후 역할 = MANAGER', roleData?.accountRole === 'MANAGER', `role=${roleData?.accountRole}`)
+    assert('변경 후 역할 = ADMIN', roleData?.accountRole === 'ADMIN', `role=${roleData?.accountRole}`)
 
     // 즉시 반영 확인 — 상세 조회
     const { data: detailData } = await request('GET', `${ADMIN_API}/users/${targetUser.id}`)
-    assert('상세에서도 MANAGER 확인', detailData?.accountRole === 'MANAGER', `role=${detailData?.accountRole}`)
+    assert('상세에서도 ADMIN 확인', detailData?.accountRole === 'ADMIN', `role=${detailData?.accountRole}`)
 
     // 다시 USER로 복원
     const { status: revertStatus } = await request(
@@ -308,8 +323,8 @@ async function testRoleChangeEffect() {
     console.log('  ⚠️ roletest 유저를 찾을 수 없음')
   }
 
-  // admin을 MANAGER로 복원
-  await exec(`${MYSQL_SETUP} "UPDATE tbl_user SET account_role='MANAGER' WHERE email='e2e-admin@dudoong.com'"`)
+  // admin을 ADMIN으로 복원
+  await exec(`${MYSQL_SETUP} "UPDATE tbl_user SET account_role='ADMIN' WHERE email='e2e-admin@dudoong.com'"`)
 }
 
 // ─── Main ────────────────────────────────────────────────
@@ -321,11 +336,11 @@ async function main() {
 
   // 서버 연결 확인
   try {
-    await fetch(`${PUBLIC_API}/v1/examples/health`, { signal: AbortSignal.timeout(5000) })
+    await fetch(`${PUBLIC_API}/examples/health`, { signal: AbortSignal.timeout(5000) })
   } catch {
     console.error('\n❌ 서버에 연결할 수 없습니다.')
     console.error('   1. cd DuDoong-Backend && docker compose up -d')
-    console.error('   2. SPRING_PROFILES_ACTIVE=infrastructure,domain,domain-local,common ./gradlew :DuDoong-Api:bootRun')
+    console.error('   2. ./gradlew :DuDoong-Api:bootRun --args=\'--spring.profiles.active=local,infrastructure,domain,domain-local,common,common-local\'')
     process.exit(1)
   }
 

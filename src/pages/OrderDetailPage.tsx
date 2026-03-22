@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, XCircle, CreditCard, User, Calendar, Tag } from 'lucide-react'
 import { getOrderDetail, cancelOrder } from '../api/admin'
@@ -128,6 +128,117 @@ export default function OrderDetailPage() {
             {new Date(order.createdAt).toLocaleString('ko-KR')}
           </dd>
         </div>
+
+        {/* 주문 정보 섹션 */}
+        {(order.orderNo || order.orderMethod || order.userId !== undefined || order.eventId !== undefined) && (
+          <div className="mt-4 rounded-xl border border-gray-200 p-4">
+            <h3 className="mb-3 text-sm font-semibold text-gray-700">주문 정보</h3>
+            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {order.orderNo && (
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <dt className="text-xs text-gray-500">주문번호</dt>
+                  <dd className="mt-0.5 font-mono text-sm font-medium text-gray-900">{order.orderNo}</dd>
+                </div>
+              )}
+              {order.orderMethod && (
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <dt className="text-xs text-gray-500">주문방식</dt>
+                  <dd className="mt-0.5 text-sm font-medium text-gray-900">
+                    {order.orderMethod === 'PAYMENT' ? '결제' : order.orderMethod === 'APPROVAL' ? '승인' : order.orderMethod}
+                  </dd>
+                </div>
+              )}
+              {order.userId !== undefined && (
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <dt className="text-xs text-gray-500">유저</dt>
+                  <dd className="mt-0.5 text-sm font-medium text-blue-600">
+                    <Link to={`/users/${order.userId}`} className="hover:underline">
+                      #{order.userId} {order.userName}
+                    </Link>
+                  </dd>
+                </div>
+              )}
+              {order.eventId !== undefined && (
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <dt className="text-xs text-gray-500">이벤트</dt>
+                  <dd className="mt-0.5 text-sm font-medium text-blue-600">
+                    <Link to={`/events/${order.eventId}`} className="hover:underline">
+                      #{order.eventId} {order.eventName}
+                    </Link>
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </div>
+        )}
+
+        {/* 결제 상세 섹션 */}
+        {(order.paymentMethod || order.supplyAmount || order.discountAmount || order.couponName || order.receiptUrl) && (
+          <div className="mt-4 rounded-xl border border-gray-200 p-4">
+            <h3 className="mb-3 text-sm font-semibold text-gray-700">결제 상세</h3>
+            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {order.paymentMethod && (
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <dt className="text-xs text-gray-500">결제수단</dt>
+                  <dd className="mt-0.5 text-sm font-medium text-gray-900">{order.paymentMethod}</dd>
+                </div>
+              )}
+              {order.supplyAmount && (
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <dt className="text-xs text-gray-500">공급금액</dt>
+                  <dd className="mt-0.5 text-sm font-medium text-gray-900">{order.supplyAmount}</dd>
+                </div>
+              )}
+              {order.discountAmount && (
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <dt className="text-xs text-gray-500">할인금액</dt>
+                  <dd className="mt-0.5 text-sm font-medium text-gray-900">{order.discountAmount}</dd>
+                </div>
+              )}
+              {order.couponName && (
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <dt className="text-xs text-gray-500">쿠폰</dt>
+                  <dd className="mt-0.5 text-sm font-medium text-gray-900">{order.couponName}</dd>
+                </div>
+              )}
+              {order.receiptUrl && (
+                <div className="rounded-lg bg-gray-50 p-3 sm:col-span-2">
+                  <dt className="text-xs text-gray-500">영수증</dt>
+                  <dd className="mt-0.5 text-sm font-medium text-blue-600">
+                    <a href={order.receiptUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                      영수증 보기
+                    </a>
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </div>
+        )}
+
+        {/* 시간 정보 섹션 */}
+        {(order.approvedAt || order.withDrawAt) && (
+          <div className="mt-4 rounded-xl border border-gray-200 p-4">
+            <h3 className="mb-3 text-sm font-semibold text-gray-700">시간 정보</h3>
+            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {order.approvedAt && (
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <dt className="text-xs text-gray-500">승인일시</dt>
+                  <dd className="mt-0.5 text-sm font-medium text-gray-900">
+                    {new Date(order.approvedAt).toLocaleString('ko-KR')}
+                  </dd>
+                </div>
+              )}
+              {order.withDrawAt && (
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <dt className="text-xs text-gray-500">취소/환불일시</dt>
+                  <dd className="mt-0.5 text-sm font-medium text-gray-900">
+                    {new Date(order.withDrawAt).toLocaleString('ko-KR')}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </div>
+        )}
 
         {canCancel(order.orderStatus) && (
           <div className="mt-6 border-t border-gray-200 pt-6">
