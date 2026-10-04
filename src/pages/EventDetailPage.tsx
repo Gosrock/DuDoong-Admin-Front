@@ -16,7 +16,7 @@ import {
   exportIssuedTickets,
 } from '../api/admin'
 import type { AdminEventDetail, AdminIssuedTicket, AdminTicketItem, Page } from '../types'
-import { cn } from '../lib/utils'
+import { cn, formatTicketCount, isUnlimitedTicketCount } from '../lib/utils'
 import { label, eventStatusLabel } from '../lib/labels'
 import ConfirmModal from '../components/ConfirmModal'
 import ToastContainer from '../components/ToastContainer'
@@ -514,9 +514,9 @@ export default function EventDetailPage() {
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium text-gray-900">{item.name}</td>
                     <td className="px-4 py-3 text-gray-700">{item.price.toLocaleString()}원</td>
-                    <td className="px-4 py-3 text-gray-700">{item.quantity.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-gray-700">{item.supplyCount.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-gray-700">{item.purchaseLimit.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-gray-700">{isUnlimitedTicketCount(item.supplyCount) ? '무제한' : item.quantity.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-gray-700">{formatTicketCount(item.supplyCount, '무제한')}</td>
+                    <td className="px-4 py-3 text-gray-700">{formatTicketCount(item.purchaseLimit, '제한 없음')}</td>
                     <td className="px-4 py-3 text-gray-500">{item.type}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
@@ -871,7 +871,9 @@ export default function EventDetailPage() {
               <span className="font-medium">{adjustingTicketItem.name}</span>
             </p>
             <p className="mb-4 text-sm text-gray-500">
-              현재 재고: {adjustingTicketItem.quantity.toLocaleString()} / 공급량: {adjustingTicketItem.supplyCount.toLocaleString()}
+              {isUnlimitedTicketCount(adjustingTicketItem.supplyCount)
+                ? '수량 무제한 티켓은 재고를 조정할 수 없습니다.'
+                : `현재 재고: ${adjustingTicketItem.quantity.toLocaleString()} / 공급량: ${adjustingTicketItem.supplyCount.toLocaleString()}`}
             </p>
             <form onSubmit={handleStockAdjustSubmit} className="space-y-4">
               <div>
