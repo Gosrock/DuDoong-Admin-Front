@@ -19,8 +19,9 @@ const stateBadge: Record<string, string> = {
   UNKNOWN: 'bg-red-100 text-red-700',
 }
 
+// 백엔드가 KST 'YYYY-MM-DDTHH:mm:ss'로 준다. Date로 파싱하면 브라우저 타임존에 따라 바뀌므로 문자열 그대로 쓴다
 const formatDateTime = (value: string | null) =>
-  value ? new Date(value).toLocaleString('ko-KR') : '-'
+  value ? value.replace('T', ' ').slice(0, 16) : '-'
 
 export default function StagingServerPage() {
   const queryClient = useQueryClient()

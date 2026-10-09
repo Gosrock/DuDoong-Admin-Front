@@ -71,6 +71,13 @@ describe('StagingServerPage', () => {
     expect(screen.getByText('-')).toBeInTheDocument()
   })
 
+  it('KST 시각 문자열을 타임존 변환 없이 그대로 표시한다', async () => {
+    mockState('RUNNING', '2026-10-09T10:00:00')
+    renderPage()
+    expect(await screen.findByText('2026-10-09 10:00')).toBeInTheDocument()
+    expect(screen.getByText('2026-10-10 02:00')).toBeInTheDocument()
+  })
+
   it('STOPPED 상태에서는 켜기만 활성화된다', async () => {
     mockState('STOPPED')
     renderPage()
