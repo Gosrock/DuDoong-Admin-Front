@@ -114,7 +114,7 @@ export default function StagingServerPage() {
 
             {data.state === 'RUNNING' && data.appStatus === 'DOWN' && (
               <p className="mt-3 text-sm text-red-600">
-                켠 지 5분이 지나도 앱이 응답하지 않습니다. 배포 상태를 확인해 주세요.
+                켠 지 10분이 지나도 앱이 응답하지 않습니다. 배포 상태를 확인해 주세요. (30초마다 다시 확인합니다)
               </p>
             )}
 

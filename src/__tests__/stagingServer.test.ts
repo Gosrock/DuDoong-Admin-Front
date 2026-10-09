@@ -13,9 +13,12 @@ describe('stagingRefetchInterval', () => {
     expect(stagingRefetchInterval({ state: 'RUNNING', appStatus: null })).toBe(5000)
   })
 
-  it('앱이 UP 이거나 DOWN 이면 폴링하지 않는다', () => {
+  it('앱이 UP 이면 폴링하지 않는다', () => {
     expect(stagingRefetchInterval({ state: 'RUNNING', appStatus: 'UP' })).toBe(false)
-    expect(stagingRefetchInterval({ state: 'RUNNING', appStatus: 'DOWN' })).toBe(false)
+  })
+
+  it('앱이 DOWN 이면 늦게 뜰 수 있어 30초 간격으로 계속 확인한다', () => {
+    expect(stagingRefetchInterval({ state: 'RUNNING', appStatus: 'DOWN' })).toBe(30000)
   })
 
   it('그 외 상태에서는 폴링하지 않는다', () => {
