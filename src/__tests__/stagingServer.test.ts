@@ -3,14 +3,24 @@ import { stagingRefetchInterval, getErrorMessage, STAGING_POLL_INTERVAL_MS } fro
 import { stagingServerStateLabel } from '../lib/labels'
 
 describe('stagingRefetchInterval', () => {
-  it('PENDING, STOPPING 상태에서만 5초 간격으로 폴링한다', () => {
-    expect(stagingRefetchInterval('PENDING')).toBe(STAGING_POLL_INTERVAL_MS)
-    expect(stagingRefetchInterval('STOPPING')).toBe(5000)
+  it('PENDING, STOPPING 상태에서는 5초 간격으로 폴링한다', () => {
+    expect(stagingRefetchInterval({ state: 'PENDING', appStatus: null })).toBe(STAGING_POLL_INTERVAL_MS)
+    expect(stagingRefetchInterval({ state: 'STOPPING', appStatus: null })).toBe(5000)
+  })
+
+  it('RUNNING 이어도 앱이 준비 중(STARTING)이거나 아직 모르면 폴링한다', () => {
+    expect(stagingRefetchInterval({ state: 'RUNNING', appStatus: 'STARTING' })).toBe(5000)
+    expect(stagingRefetchInterval({ state: 'RUNNING', appStatus: null })).toBe(5000)
+  })
+
+  it('앱이 UP 이거나 DOWN 이면 폴링하지 않는다', () => {
+    expect(stagingRefetchInterval({ state: 'RUNNING', appStatus: 'UP' })).toBe(false)
+    expect(stagingRefetchInterval({ state: 'RUNNING', appStatus: 'DOWN' })).toBe(false)
   })
 
   it('그 외 상태에서는 폴링하지 않는다', () => {
-    for (const s of ['STOPPED', 'RUNNING', 'NOT_CONFIGURED', 'UNKNOWN'] as const) {
-      expect(stagingRefetchInterval(s)).toBe(false)
+    for (const s of ['STOPPED', 'NOT_CONFIGURED', 'UNKNOWN'] as const) {
+      expect(stagingRefetchInterval({ state: s, appStatus: null })).toBe(false)
     }
     expect(stagingRefetchInterval(undefined)).toBe(false)
   })

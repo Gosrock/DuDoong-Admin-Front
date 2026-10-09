@@ -5,6 +5,7 @@ const stagingServer = {
   launchedAt: null,
   nextAutoStopAt: '2026-10-10T02:00:00',
   url: 'https://staging.example.com',
+  appStatus: null,
 }
 
 export const handlers = [

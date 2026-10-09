@@ -24,7 +24,7 @@ function renderPage() {
   )
 }
 
-const mockState = (state: string, launchedAt: string | null = null) =>
+const mockState = (state: string, launchedAt: string | null = null, appStatus: string | null = null) =>
   server.use(
     http.get('*/internal-api/v1/infra/staging', () =>
       HttpResponse.json({
@@ -34,6 +34,7 @@ const mockState = (state: string, launchedAt: string | null = null) =>
           launchedAt,
           nextAutoStopAt: '2026-10-10T02:00:00',
           url: 'https://staging.example.com',
+          appStatus,
         },
       })
     )
@@ -78,6 +79,29 @@ describe('StagingServerPage', () => {
     expect(screen.getByText('2026-10-10 02:00')).toBeInTheDocument()
   })
 
+  it.each([
+    ['UP', '앱 정상'],
+    ['STARTING', '앱 준비 중'],
+    ['DOWN', '앱 응답 없음'],
+  ])('RUNNING 이고 앱 %s 이면 "%s" 뱃지를 표시한다', async (appStatus, text) => {
+    mockState('RUNNING', '2026-10-09T10:00:00', appStatus)
+    renderPage()
+    expect(await screen.findByText(text, { selector: 'span' })).toBeInTheDocument()
+  })
+
+  it('앱이 DOWN 이면 배포 확인 안내를 표시한다', async () => {
+    mockState('RUNNING', '2026-10-09T10:00:00', 'DOWN')
+    renderPage()
+    expect(await screen.findByText(/앱이 응답하지 않습니다/)).toBeInTheDocument()
+  })
+
+  it('RUNNING 이 아니면 앱 뱃지를 표시하지 않는다', async () => {
+    mockState('STOPPED')
+    renderPage()
+    await screen.findByText('꺼짐', { selector: 'span' })
+    expect(screen.queryByText(/^앱 /, { selector: 'span' })).not.toBeInTheDocument()
+  })
+
   it('STOPPED 상태에서는 켜기만 활성화된다', async () => {
     mockState('STOPPED')
     renderPage()
@@ -111,15 +135,19 @@ describe('StagingServerPage', () => {
   })
 
   it('켜기 클릭 시 API를 호출하고 토스트를 표시한다', async () => {
-    mockState('STOPPED')
+    // 실제 서버처럼 켜기 요청 뒤에는 조회도 PENDING 을 돌려준다 (성공 후 다시 조회하므로)
+    let state = 'STOPPED'
     let called = false
+    const body = () => ({
+      status: 200,
+      data: { state, launchedAt: null, nextAutoStopAt: '2026-10-10T02:00:00', url: 'https://staging.example.com', appStatus: null },
+    })
     server.use(
+      http.get('*/internal-api/v1/infra/staging', () => HttpResponse.json(body())),
       http.post('*/internal-api/v1/infra/staging/start', () => {
         called = true
-        return HttpResponse.json({
-          status: 200,
-          data: { state: 'PENDING', launchedAt: null, nextAutoStopAt: '2026-10-10T02:00:00', url: 'https://staging.example.com' },
-        })
+        state = 'PENDING'
+        return HttpResponse.json(body())
       })
     )
     const user = userEvent.setup()

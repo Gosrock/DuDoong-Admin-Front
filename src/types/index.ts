@@ -164,9 +164,13 @@ export type StagingServerState =
   | 'NOT_CONFIGURED'
   | 'UNKNOWN'
 
+export type StagingAppStatus = 'UP' | 'STARTING' | 'DOWN'
+
 export interface StagingServer {
   state: StagingServerState
   launchedAt: string | null
   nextAutoStopAt: string
   url: string
+  /** 서버가 RUNNING 일 때만 값이 있다 (사설 IP 헬스체크 결과) */
+  appStatus: StagingAppStatus | null
 }

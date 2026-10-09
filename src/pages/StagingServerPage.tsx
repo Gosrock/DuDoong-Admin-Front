@@ -4,7 +4,7 @@ import { ExternalLink } from 'lucide-react'
 import { getStagingServer, startStagingServer, stopStagingServer } from '../api/admin'
 import type { StagingServer } from '../types'
 import { cn } from '../lib/utils'
-import { label, stagingServerStateLabel } from '../lib/labels'
+import { label, stagingAppStatusLabel, stagingServerStateLabel } from '../lib/labels'
 import { getErrorMessage, stagingRefetchInterval } from '../lib/staging'
 import ConfirmModal from '../components/ConfirmModal'
 import ToastContainer from '../components/ToastContainer'
@@ -19,6 +19,12 @@ const stateBadge: Record<string, string> = {
   UNKNOWN: 'bg-red-100 text-red-700',
 }
 
+const appBadge: Record<string, string> = {
+  UP: 'bg-green-100 text-green-700',
+  STARTING: 'bg-yellow-100 text-yellow-700',
+  DOWN: 'bg-red-100 text-red-700',
+}
+
 // 백엔드가 KST 'YYYY-MM-DDTHH:mm:ss'로 준다. Date로 파싱하면 브라우저 타임존에 따라 바뀌므로 문자열 그대로 쓴다
 const formatDateTime = (value: string | null) =>
   value ? value.replace('T', ' ').slice(0, 16) : '-'
@@ -31,13 +37,14 @@ export default function StagingServerPage() {
   const { data, isLoading, isError } = useQuery<StagingServer>({
     queryKey: ['staging-server'],
     queryFn: getStagingServer,
-    refetchInterval: (query) => stagingRefetchInterval(query.state.data?.state),
+    refetchInterval: (query) => stagingRefetchInterval(query.state.data),
   })
 
   const startMutation = useMutation({
     mutationFn: startStagingServer,
     onSuccess: (server: StagingServer) => {
       queryClient.setQueryData(['staging-server'], server)
+      queryClient.invalidateQueries({ queryKey: ['staging-server'] })
       toast.success('스테이징 서버를 켜는 중입니다.')
     },
     onError: (error) => {
@@ -49,6 +56,7 @@ export default function StagingServerPage() {
     mutationFn: stopStagingServer,
     onSuccess: (server: StagingServer) => {
       queryClient.setQueryData(['staging-server'], server)
+      queryClient.invalidateQueries({ queryKey: ['staging-server'] })
       toast.success('스테이징 서버를 끄는 중입니다.')
     },
     onError: (error) => {
@@ -92,7 +100,23 @@ export default function StagingServerPage() {
               >
                 {label(stagingServerStateLabel, data.state)}
               </span>
+              {data.state === 'RUNNING' && data.appStatus && (
+                <span
+                  className={cn(
+                    'inline-block rounded-full px-2.5 py-0.5 text-xs font-medium',
+                    appBadge[data.appStatus] ?? 'bg-gray-100 text-gray-700'
+                  )}
+                >
+                  앱 {label(stagingAppStatusLabel, data.appStatus)}
+                </span>
+              )}
             </div>
+
+            {data.state === 'RUNNING' && data.appStatus === 'DOWN' && (
+              <p className="mt-3 text-sm text-red-600">
+                켠 지 5분이 지나도 앱이 응답하지 않습니다. 배포 상태를 확인해 주세요.
+              </p>
+            )}
 
             <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <div>

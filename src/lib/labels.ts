@@ -47,6 +47,12 @@ export const stagingServerStateLabel: Record<string, string> = {
   UNKNOWN: '알 수 없음',
 }
 
+export const stagingAppStatusLabel: Record<string, string> = {
+  UP: '정상',
+  STARTING: '준비 중',
+  DOWN: '응답 없음',
+}
+
 export function label(map: Record<string, string>, key: string): string {
   return map[key] ?? key
 }
