@@ -38,6 +38,15 @@ export const commentStatusLabel: Record<string, string> = {
   DELETED: '삭제됨',
 }
 
+export const stagingServerStateLabel: Record<string, string> = {
+  STOPPED: '꺼짐',
+  PENDING: '켜는 중',
+  RUNNING: '켜짐',
+  STOPPING: '끄는 중',
+  NOT_CONFIGURED: '설정 없음',
+  UNKNOWN: '알 수 없음',
+}
+
 export function label(map: Record<string, string>, key: string): string {
   return map[key] ?? key
 }

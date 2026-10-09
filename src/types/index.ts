@@ -155,3 +155,18 @@ export interface Page<T> {
   number: number
   size: number
 }
+
+export type StagingServerState =
+  | 'STOPPED'
+  | 'PENDING'
+  | 'RUNNING'
+  | 'STOPPING'
+  | 'NOT_CONFIGURED'
+  | 'UNKNOWN'
+
+export interface StagingServer {
+  state: StagingServerState
+  launchedAt: string | null
+  nextAutoStopAt: string
+  url: string
+}

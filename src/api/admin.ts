@@ -105,6 +105,14 @@ export const exportTicketItems = (eventId: number) =>
 export const exportIssuedTickets = (eventId: number) =>
   client.get(`/internal-api/v1/events/${eventId}/issued-tickets/export`, { responseType: 'blob' })
 
+// Infra - Staging server
+export const getStagingServer = () =>
+  client.get('/internal-api/v1/infra/staging').then(r => r.data.data)
+export const startStagingServer = () =>
+  client.post('/internal-api/v1/infra/staging/start').then(r => r.data.data)
+export const stopStagingServer = () =>
+  client.post('/internal-api/v1/infra/staging/stop').then(r => r.data.data)
+
 // Auth
 export const getAdminMe = () =>
   client.get('/internal-api/v1/auth/me').then(r => r.data.data)

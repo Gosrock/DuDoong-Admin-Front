@@ -1,6 +1,24 @@
 import { http, HttpResponse } from 'msw'
 
+const stagingServer = {
+  state: 'STOPPED',
+  launchedAt: null,
+  nextAutoStopAt: '2026-10-10T02:00:00',
+  url: 'https://staging.example.com',
+}
+
 export const handlers = [
+  // Infra - staging server
+  http.get('*/internal-api/v1/infra/staging', () =>
+    HttpResponse.json({ status: 200, data: stagingServer })
+  ),
+  http.post('*/internal-api/v1/infra/staging/start', () =>
+    HttpResponse.json({ status: 200, data: { ...stagingServer, state: 'PENDING' } })
+  ),
+  http.post('*/internal-api/v1/infra/staging/stop', () =>
+    HttpResponse.json({ status: 200, data: { ...stagingServer, state: 'STOPPING' } })
+  ),
+
   // Dashboard
   http.get('*/internal-api/v1/dashboard', () =>
     HttpResponse.json({
