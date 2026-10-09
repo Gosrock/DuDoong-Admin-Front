@@ -174,3 +174,26 @@ export interface StagingServer {
   /** 서버가 RUNNING 일 때만 값이 있다 (사설 IP 헬스체크 결과) */
   appStatus: StagingAppStatus | null
 }
+
+export interface BatchJobSummary {
+  jobName: string
+  lastExecutionId: number
+  lastStatus: string
+  lastStartTime: string | null
+  lastEndTime: string | null
+  lastSuccessTime: string | null
+  /** 최근 7일 실패 건수 */
+  recentFailureCount: number
+}
+
+export interface BatchExecution {
+  executionId: number
+  jobName: string
+  status: string
+  exitCode: string | null
+  startTime: string | null
+  endTime: string | null
+  durationSeconds: number | null
+  exitMessage: string | null
+  parameters: Record<string, string>
+}

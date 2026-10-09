@@ -31,3 +31,7 @@ export function isUnlimitedTicketCount(count: number): boolean {
 export function formatTicketCount(count: number, unlimitedText: string): string {
   return isUnlimitedTicketCount(count) ? unlimitedText : count.toLocaleString()
 }
+
+// 백엔드가 KST 'YYYY-MM-DDTHH:mm:ss'로 준다. Date로 파싱하면 브라우저 타임존에 따라 바뀌므로 문자열 그대로 쓴다
+export const formatDateTime = (value: string | null) =>
+  value ? value.replace('T', ' ').slice(0, 16) : '-'

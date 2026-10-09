@@ -14,6 +14,7 @@ import HostsPage from './pages/HostsPage'
 import HostDetailPage from './pages/HostDetailPage'
 import RefundsPage from './pages/RefundsPage'
 import StagingServerPage from './pages/StagingServerPage'
+import BatchHistoryPage from './pages/BatchHistoryPage'
 import { hasAuthCookie } from './lib/utils'
 
 const queryClient = new QueryClient()
@@ -49,6 +50,7 @@ export default function App() {
             <Route path="hosts/:id" element={<HostDetailPage />} />
             <Route path="refunds" element={<RefundsPage />} />
             <Route path="infra/staging" element={<StagingServerPage />} />
+            <Route path="infra/batch" element={<BatchHistoryPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
