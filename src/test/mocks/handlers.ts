@@ -9,6 +9,17 @@ const stagingServer = {
 }
 
 export const handlers = [
+  // Infra - batch history
+  http.get('*/internal-api/v1/batch/jobs', () =>
+    HttpResponse.json({ status: 200, data: [] })
+  ),
+  http.get('*/internal-api/v1/batch/executions', () =>
+    HttpResponse.json({
+      status: 200,
+      data: { content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 },
+    })
+  ),
+
   // Infra - staging server
   http.get('*/internal-api/v1/infra/staging', () =>
     HttpResponse.json({ status: 200, data: stagingServer })

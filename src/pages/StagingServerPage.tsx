@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ExternalLink } from 'lucide-react'
 import { getStagingServer, startStagingServer, stopStagingServer } from '../api/admin'
 import type { StagingServer } from '../types'
-import { cn } from '../lib/utils'
+import { cn, formatDateTime } from '../lib/utils'
 import { label, stagingAppStatusLabel, stagingServerStateLabel } from '../lib/labels'
 import { getErrorMessage, stagingRefetchInterval } from '../lib/staging'
 import ConfirmModal from '../components/ConfirmModal'
@@ -24,10 +24,6 @@ const appBadge: Record<string, string> = {
   STARTING: 'bg-yellow-100 text-yellow-700',
   DOWN: 'bg-red-100 text-red-700',
 }
-
-// 백엔드가 KST 'YYYY-MM-DDTHH:mm:ss'로 준다. Date로 파싱하면 브라우저 타임존에 따라 바뀌므로 문자열 그대로 쓴다
-const formatDateTime = (value: string | null) =>
-  value ? value.replace('T', ' ').slice(0, 16) : '-'
 
 export default function StagingServerPage() {
   const queryClient = useQueryClient()

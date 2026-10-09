@@ -53,6 +53,16 @@ export const stagingAppStatusLabel: Record<string, string> = {
   DOWN: '응답 없음',
 }
 
+export const batchStatusLabel: Record<string, string> = {
+  COMPLETED: '성공',
+  FAILED: '실패',
+  STARTED: '실행 중',
+  STARTING: '실행 중',
+  STOPPED: '중지됨',
+  STOPPING: '중지됨',
+  ABANDONED: '중단',
+}
+
 export function label(map: Record<string, string>, key: string): string {
   return map[key] ?? key
 }

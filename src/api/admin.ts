@@ -116,3 +116,9 @@ export const stopStagingServer = () =>
 // Auth
 export const getAdminMe = () =>
   client.get('/internal-api/v1/auth/me').then(r => r.data.data)
+
+// Infra - Batch history
+export const getBatchJobs = () =>
+  client.get('/internal-api/v1/batch/jobs').then(r => r.data.data)
+export const getBatchExecutions = (params: { jobName?: string; page?: number; size?: number }) =>
+  client.get('/internal-api/v1/batch/executions', { params }).then(r => r.data.data)

@@ -12,6 +12,7 @@ import {
   X,
   RotateCcw,
   Server,
+  History,
 } from 'lucide-react'
 import { cn, getMainSiteUrl } from '../lib/utils'
 
@@ -24,6 +25,7 @@ const navItems = [
   { to: '/refunds', icon: RotateCcw, label: '환불 관리' },
   { to: '/comments', icon: MessageSquare, label: '댓글 관리' },
   { to: '/infra/staging', icon: Server, label: '스테이징 서버' },
+  { to: '/infra/batch', icon: History, label: '배치 이력' },
 ]
 
 export default function AdminLayout() {
