@@ -11,6 +11,7 @@ import {
   Menu,
   X,
   RotateCcw,
+  Server,
 } from 'lucide-react'
 import { cn, getMainSiteUrl } from '../lib/utils'
 
@@ -22,6 +23,7 @@ const navItems = [
   { to: '/orders', icon: ShoppingCart, label: '주문 관리' },
   { to: '/refunds', icon: RotateCcw, label: '환불 관리' },
   { to: '/comments', icon: MessageSquare, label: '댓글 관리' },
+  { to: '/infra/staging', icon: Server, label: '스테이징 서버' },
 ]
 
 export default function AdminLayout() {
