@@ -3,6 +3,17 @@ on:
   push:
     tags:
       - AdminFront-v*.*.*
+  # 이미 배포된 버전을 같은 소스로 다시 빌드(예: 멀티 아키 재빌드)할 때 사용
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: '빌드할 git 태그 (예: AdminFront-v0.6.0)'
+        required: true
+        type: string
+      version:
+        description: '이미지 태그 버전 (예: 0.6.0)'
+        required: true
+        type: string
 
 jobs:
   build:
@@ -10,12 +21,34 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
+          fetch-depth: 0
+
+      # 수동 재빌드 시 소스는 지정한 태그 그대로 쓰고, Dockerfile 만 이 워크플로가 실행된 커밋의 것으로 교체한다.
+      # (구버전 태그의 Dockerfile 에는 --platform=$BUILDPLATFORM 이 없어 arm64 빌드가 QEMU 로 느리게 돌기 때문)
+      - name: Use Dockerfile from workflow commit
+        if: github.event_name == 'workflow_dispatch'
+        run: git checkout ${{ github.sha }} -- Dockerfile
 
       - name: Get the version
         id: get_version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          RELEASE_VERSION_WITHOUT_V="$(cut -d'v' -f2 <<< ${GITHUB_REF#refs/*/})"
-          echo "VERSION=$RELEASE_VERSION_WITHOUT_V" >> $GITHUB_OUTPUT
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="$INPUT_VERSION"
+          else
+            VERSION="$(cut -d'v' -f2 <<< ${GITHUB_REF#refs/*/})"
+          fi
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "잘못된 버전 형식: $VERSION" >&2
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -31,7 +64,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           build-args: BUILD_MODE=production
           tags: water0641/dudoong-internal-admin:${{ steps.get_version.outputs.VERSION }}
